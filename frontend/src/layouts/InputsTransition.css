@@ -1,0 +1,35 @@
+.fade-right-enter {
+  opacity: 0;
+  transform: translateX(20px);
+}
+.fade-right-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.fade-right-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+.fade-right-exit-active {
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.nav-link-custom {
+  color: inherit !important;
+  transition: color 0.2s ease;
+}
+
+.nav-link-custom:hover,
+.nav-link-custom:focus {
+  color: #0d6efd !important; /* или use var(--bs-primary) */
+  text-decoration: none;
+}
+
+.nav-link-active {
+  color: #0d6efd !important;
+  font-weight: bold;
+}
