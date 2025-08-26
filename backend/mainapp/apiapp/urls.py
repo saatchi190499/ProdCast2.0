@@ -3,6 +3,7 @@ from .views.admin_view import UserListView, change_user_role
 from .views.me_view import MeView
 from .views.scenario_components_view import *
 from .views.object_meta_data_view import *
+from .views.unit_view import *
 
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -27,6 +28,6 @@ urlpatterns = [
     path("components/<int:component_id>/events/", EventRecordsView.as_view()),
 
     path("object-metadata/", ObjectMetadataView.as_view()),
-    
-    
+    path("unit-system-property-mapping/", UnitSystemPropertyMappingView.as_view()),
+
 ]

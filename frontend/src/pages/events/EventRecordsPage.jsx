@@ -27,15 +27,37 @@ export default function EventRecordsPage() {
   const [instanceOptions, setInstanceOptions] = useState({});
   const [propertyOptions, setPropertyOptions] = useState({});
 
+  const [selectedUnitSystemId, setSelectedUnitSystemId] = useState(null);
+  const [unitSystemMappings, setUnitSystemMappings] = useState([]);
   const emptyRow = {
     date_time: "", object_type: "", object_instance: "", object_type_property: "",
     value: "", sub_data_source: "", description: ""
   };
 
+
+  const getConversionForProperty = (propertyName) => {
+    if (!selectedUnitSystemId) return { scale: 1, offset: 0 };
+    const system = unitSystemMappings.find(s => s.unit_system_id === selectedUnitSystemId);
+    if (!system) return { scale: 1, offset: 0 };
+    const prop = system.properties.find(p => p.property_name === propertyName);
+    return {
+      scale: prop?.scale_factor ?? 1,
+      offset: prop?.offset ?? 0
+    };
+  };
+
+  const getUnitForProperty = (propertyName) => {
+    if (!selectedUnitSystemId) return "";
+    const system = unitSystemMappings.find(s => s.unit_system_id === selectedUnitSystemId);
+    if (!system) return "";
+    const prop = system.properties.find(p => p.property_name === propertyName);
+    return prop?.unit || "";
+  };
+
   const convertIdsToNames = (data, typeList, instanceMap, propertyMap) => {
     return data.map((r) => {
       const prop = Object.values(propertyMap).flat().find((x) => x.id === r.object_type_property);
-      console.log(prop)
+
       return {
         ...r,
         object_type: typeList.find((t) => t.id === r.object_type)?.name || "",
@@ -45,6 +67,7 @@ export default function EventRecordsPage() {
       };
     });
   };
+
   const validateRow = (r) => {
     const validInstances = instanceOptions[r.object_type] || [];
     const validProps = propertyOptions[r.object_type] || [];
@@ -52,8 +75,10 @@ export default function EventRecordsPage() {
     return {
       date_time: !r.date_time?.trim?.(),
       object_type: !r.object_type?.trim?.(),
-      object_instance: !r.object_instance?.trim?.() || !validInstances.find(x => x.name === r.object_instance),
-      object_type_property: !r.object_type_property?.trim?.() || !validProps.find(x => x.name === r.object_type_property),
+      object_instance: !r.object_instance?.trim?.() ||
+        (validInstances.length > 0 && !validInstances.find(x => x.name === r.object_instance)),
+      object_type_property: !r.object_type_property?.trim?.() ||
+        (validProps.length > 0 && !validProps.find(x => x.name === r.object_type_property)),
       value: r.value === "" || r.value === null || Number(r.value) < 0,
     };
   };
@@ -74,6 +99,17 @@ export default function EventRecordsPage() {
   };
 
   useEffect(() => {
+    api.get("/unit-system-property-mapping/").then(res => {
+      setUnitSystemMappings(res.data);
+      // Set default unit system to "Oil Field" if available
+      const oilField = res.data.find(s => s.unit_system_name === "Oil Field");
+      if (oilField) setSelectedUnitSystemId(oilField.unit_system_id);
+      else if (res.data.length > 0) setSelectedUnitSystemId(res.data[0].unit_system_id);
+    });
+  }, []);
+
+
+  useEffect(() => {
     const fetchAll = async () => {
       try {
         const componentRes = await api.get(`/components/${id}/`);
@@ -89,11 +125,10 @@ export default function EventRecordsPage() {
         setPropertyOptions(properties);
 
         const recordsRes = await api.get(`/components/${id}/events/`);
-        console.log(recordsRes)
 
         const converted = convertIdsToNames(recordsRes.data, types, instances, properties);
         setRecords(converted);
-        console.log(converted)
+
         const initialErrors = {};
         converted.forEach((r, i) => {
           initialErrors[i] = validateRow(r);
@@ -153,7 +188,7 @@ export default function EventRecordsPage() {
           return cleanRow;
         });
         const updated = [...records, ...parsed];
-        console.log(updated)
+
         setRecords(updated);
 
         const updatedErrorsMap = {};
@@ -342,6 +377,20 @@ export default function EventRecordsPage() {
         </Form.Select>
         <Form.Control type="text" placeholder={t("value")} value={bulkEdit.value} onChange={(e) => setBulkEdit({ ...bulkEdit, value: e.target.value })} style={{ maxWidth: 150 }} />
         <Button variant="outline-primary" onClick={handleBulkEdit}>⚙ {t("apply")}</Button>
+
+        <Form.Select
+          value={selectedUnitSystemId || ""}
+          onChange={e => setSelectedUnitSystemId(Number(e.target.value))}
+          style={{ maxWidth: 300 }}
+        >
+          <option value="">Select Unit System</option>
+          {unitSystemMappings.map(system => (
+            <option key={system.unit_system_id} value={system.unit_system_id}>
+              {system.unit_system_name}
+            </option>
+          ))}
+        </Form.Select>
+
       </div>
       <div style={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto" }}>
         <Table bordered size="sm" className="rounded">
@@ -415,23 +464,49 @@ export default function EventRecordsPage() {
                     <div className="d-flex align-items-center">
                       <Form.Control
                         type="number"
-                        value={Number(r.value).toFixed(2)}
-                        onChange={(e) => handleChange(i, "value", e.target.value)}
+                        value={(() => {
+                          // Show the input as-is if not a valid number
+                          const { scale, offset } = getConversionForProperty(r.object_type_property);
+                          const rawValue = Number(r.value);
+                          if (typeof r.value === "string" && isNaN(rawValue)) return r.value;
+                          if (r.value === "" || r.value === null) return "";
+                          // Only convert if it's a valid number
+                          return (rawValue * scale + offset) || "";
+                        })()}
+                        onChange={(e) => {
+                          const { scale, offset } = getConversionForProperty(r.object_type_property);
+                          const input = e.target.value.replace(",", "."); // allow comma as decimal
+                          // Accept empty string or any string
+                          if (input === "" || isNaN(Number(input))) {
+                            handleChange(i, "value", input);
+                          } else {
+                            const displayValue = Number(input);
+                            const baseValue = scale !== 0 ? ((displayValue - offset) / scale) : displayValue;
+                            handleChange(i, "value", baseValue);
+                          }
+                        }}
+                        inputMode="decimal"
+                        autoComplete="off"
+                        spellCheck={false}
+                        pattern="[0-9.,\-]*"
+                        placeholder={t("value")}
                       />
-                      {r.unit && <span className="ms-2 text-muted">{r.unit}</span>}
+                      <span className="ms-2 text-muted">
+                        {getUnitForProperty(r.object_type_property)}
+                      </span>
                     </div>
                   </td>
                   <td>
                     <Form.Control
                       type="text"
-                      value={r.sub_data_source}
+                      value={r.sub_data_source || ""}
                       onChange={(e) => handleChange(i, "sub_data_source", e.target.value)}
                     />
                   </td>
                   <td>
                     <Form.Control
                       type="text"
-                      value={r.description}
+                      value={r.description || ""}
                       onChange={(e) => handleChange(i, "description", e.target.value)}
                     />
                   </td>
