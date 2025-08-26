@@ -33,14 +33,18 @@ export default function EventRecordsPage() {
   };
 
   const convertIdsToNames = (data, typeList, instanceMap, propertyMap) => {
-    return data.map((r) => ({
-      ...r,
-      object_type: typeList.find((t) => t.id === r.object_type)?.name || "",
-      object_instance: Object.values(instanceMap).flat().find((x) => x.id === r.object_instance)?.name || "",
-      object_type_property: Object.values(propertyMap).flat().find((x) => x.id === r.object_type_property)?.name || ""
-    }));
+    return data.map((r) => {
+      const prop = Object.values(propertyMap).flat().find((x) => x.id === r.object_type_property);
+      console.log(prop)
+      return {
+        ...r,
+        object_type: typeList.find((t) => t.id === r.object_type)?.name || "",
+        object_instance: Object.values(instanceMap).flat().find((x) => x.id === r.object_instance)?.name || "",
+        object_type_property: prop?.name || "",
+        unit: prop?.unit || "",// Access the unit name
+      };
+    });
   };
-
   const validateRow = (r) => {
     const validInstances = instanceOptions[r.object_type] || [];
     const validProps = propertyOptions[r.object_type] || [];
@@ -73,7 +77,7 @@ export default function EventRecordsPage() {
     const fetchAll = async () => {
       try {
         const componentRes = await api.get(`/components/${id}/`);
-        setComponentName(componentRes.data.name || "Компонент");
+        setComponentName(componentRes.data.name || "Component");
 
         const metaRes = await api.get("/object-metadata/");
         const types = metaRes.data.types;
@@ -85,9 +89,11 @@ export default function EventRecordsPage() {
         setPropertyOptions(properties);
 
         const recordsRes = await api.get(`/components/${id}/events/`);
+        console.log(recordsRes)
+
         const converted = convertIdsToNames(recordsRes.data, types, instances, properties);
         setRecords(converted);
-
+        console.log(converted)
         const initialErrors = {};
         converted.forEach((r, i) => {
           initialErrors[i] = validateRow(r);
@@ -190,11 +196,22 @@ export default function EventRecordsPage() {
     const realIndex = records.findIndex((r) => r === filteredRecords[filteredIndex]);
     if (realIndex === -1) return;
     const updated = [...records];
+
     updated[realIndex][field] = value;
+
     if (field === "object_type") {
       updated[realIndex]["object_instance"] = "";
       updated[realIndex]["object_type_property"] = "";
+      updated[realIndex]["unit"] = ""; // Clear the unit as well
+    } else if (field === "object_type_property") {
+      // Find the selected property object from the options
+      const selectedProp = propertyOptions[updated[realIndex].object_type]?.find(
+        (p) => p.name === value
+      );
+      // Update the unit with the unit from the selected property
+      updated[realIndex]["unit"] = selectedProp?.unit || "";
     }
+
     setRecords(updated);
     const updatedErrorsMap = { ...errorsMap };
     updatedErrorsMap[realIndex] = validateRow(updated[realIndex]);
@@ -354,13 +371,13 @@ export default function EventRecordsPage() {
             {filteredRecords.map((r, i) => {
               const realIndex = records.findIndex(x => x === r);
               const error = errorsMap[realIndex] || {};
-
+              const dateOnly = r.date_time.split('T')[0];
               return (
                 <tr key={i}>
                   <td style={{ backgroundColor: error.date_time ? '#ffe6e6' : 'transparent' }}>
                     <Form.Control
                       type="date"
-                      value={r.date_time}
+                      value={dateOnly}
                       onChange={(e) => handleChange(i, "date_time", e.target.value)}
                     />
                   </td>
@@ -395,11 +412,14 @@ export default function EventRecordsPage() {
                     </Form.Select>
                   </td>
                   <td style={{ backgroundColor: error.value ? '#ffe6e6' : 'transparent' }}>
-                    <Form.Control
-                      type="number"
-                      value={Number(r.value).toFixed(2)}
-                      onChange={(e) => handleChange(i, "value", e.target.value)}
-                    />
+                    <div className="d-flex align-items-center">
+                      <Form.Control
+                        type="number"
+                        value={Number(r.value).toFixed(2)}
+                        onChange={(e) => handleChange(i, "value", e.target.value)}
+                      />
+                      {r.unit && <span className="ms-2 text-muted">{r.unit}</span>}
+                    </div>
                   </td>
                   <td>
                     <Form.Control

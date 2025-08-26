@@ -17,8 +17,20 @@ class ObjectMetadataView(APIView):
         # object properties by type
         properties_by_type = {}
         for t in type_list:
-            props = ObjectTypeProperty.objects.filter(object_type_id=t["id"]).values("object_type_property_id", "object_type_property_name")
-            properties_by_type[t["name"]] = [{"id": x["object_type_property_id"], "name": x["object_type_property_name"]} for x in props]
+            # Query for properties and include the unit's name from the related UnitDefinition model
+            props = ObjectTypeProperty.objects.filter(object_type_id=t["id"]).values(
+                "object_type_property_id",
+                "object_type_property_name",
+                "unit__alias_text"  # Use double underscore to get the unit name
+            )
+            properties_by_type[t["name"]] = [
+                {
+                    "id": x["object_type_property_id"],
+                    "name": x["object_type_property_name"],
+                    "unit": x["unit__alias_text"]  # Extract the unit name
+                } 
+                for x in props
+            ]
 
         return Response({
             "types": type_list,
