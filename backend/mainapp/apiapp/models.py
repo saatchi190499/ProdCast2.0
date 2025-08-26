@@ -292,13 +292,25 @@ class ObjectInstance(models.Model):
 class ObjectTypeProperty(models.Model):
     object_type_property_id = models.AutoField(primary_key=True)
     object_type = models.ForeignKey(ObjectType, on_delete=models.CASCADE, verbose_name="Object Type")
-
     object_type_property_name = models.CharField("Object Type Property", max_length=50)
     object_type_property_category = models.CharField("Category", max_length=50)
-
     tag = models.CharField("Tag", max_length=100, blank=True, null=True)
     openserver = models.CharField("OpenServer", max_length=100, blank=True, null=True)
-    unit = models.ForeignKey(UnitDefinition, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Unit") # New unit field
+    
+    unit_category = models.ForeignKey(UnitCategory, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Unit Category")
+    unit = models.ForeignKey(UnitDefinition, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Unit", editable=False)  # auto-set
+
+    def save(self, *args, **kwargs):
+        if self.unit_category:
+            # find the base unit for this category
+            base_unit = UnitDefinition.objects.filter(
+                unit_type=self.unit_category.unit_type,
+                is_base=True
+            ).first()
+            self.unit = base_unit
+        else:
+            self.unit = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.object_type.object_type_name} / {self.object_type_property_name}"
@@ -308,8 +320,7 @@ class ObjectTypeProperty(models.Model):
         verbose_name = "Object Type Property"
         verbose_name_plural = "Object Type Properties"
         unique_together = (("object_type", "object_type_property_name"),)
-        ordering = ["object_type_property_name"] # Changed to name for better ordering
-
+        ordering = ["object_type_property_name"]
 
 # ---------- Main Data ----------
 class MainClass(models.Model):
@@ -340,9 +351,9 @@ class MainClass(models.Model):
         verbose_name = "Main Data Record"
         verbose_name_plural = "Main Data Records"
         ordering = ["-data_source_id", "data_source_name"]
-        index_together = [
-            ("data_source_name", "data_source_id"),
-            ("object_type", "object_type_property"),
+        indexes = [
+            models.Index(fields=["data_source_name", "data_source_id"]),
+            models.Index(fields=["object_type", "object_type_property"]),
         ]
 
 

@@ -158,17 +158,20 @@ class ObjectInstanceAdmin(admin.ModelAdmin):
 
 @admin.register(ObjectTypeProperty)
 class ObjectTypePropertyAdmin(admin.ModelAdmin):
-    list_display = ('object_type', 'object_type_property_name', 'object_type_property_category', 'tag', 'unit')
-    list_filter = ('object_type', 'object_type_property_category', 'unit')
+    list_display = ('object_type', 'object_type_property_name', 'object_type_property_category', 'tag', 'unit_category', 'unit')
+    list_filter = ('object_type', 'object_type_property_category', 'unit_category')  # filter by category instead of unit
     search_fields = ('object_type_property_name', 'tag', 'openserver')
+    readonly_fields = ('unit',)  # make 'unit' read-only
+
     fieldsets = (
         (None, {
             'fields': ('object_type', 'object_type_property_name', 'object_type_property_category')
         }),
         ('Integration Details', {
-            'fields': ('tag', 'openserver', 'unit')
+            'fields': ('tag', 'openserver', 'unit_category', 'unit')
         }),
     )
+
 
 # ---------- Main Data ----------
 @admin.register(MainClass)

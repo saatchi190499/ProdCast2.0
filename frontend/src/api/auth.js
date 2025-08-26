@@ -1,7 +1,6 @@
 import axios from "axios";
 import { saveTokens, getRefreshToken, logout } from "../utils/auth";
-
-const API = "http://10.117.8.121:8000/api";
+import API from "../links.jsx"
 
 export async function login(username, password) {
   const res = await axios.post(`${API}/login/`, { username, password });

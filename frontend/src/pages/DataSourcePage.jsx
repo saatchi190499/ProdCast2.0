@@ -58,7 +58,7 @@ export default function DataSourcePage() {
     formData.append("name", newComponent.name);
     formData.append("description", newComponent.description);
     formData.append("data_source", sourceName);
-    if (sourceName === "Модели" && newComponent.file) {
+    if (sourceName === "Models" && newComponent.file) {
       formData.append("file", newComponent.file);
     }
 

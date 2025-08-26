@@ -27,7 +27,7 @@ class Command(BaseCommand):
             '--path',
             type=str,
             help='The base path to the directory containing the XLSX files. Defaults to <app_root>/data/',
-            default=os.path.join(settings.BASE_DIR, 'apiapp', 'data'),
+            default=os.path.join(settings.BASE_DIR, 'apiapp', 'management', 'commands', 'data'),
         )
 
     def handle(self, *args, **options):

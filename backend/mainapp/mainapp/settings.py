@@ -11,8 +11,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-import ldap
-from django_auth_ldap.config import LDAPSearch, LDAPSearchUnion
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -29,7 +27,8 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 CORS_ALLOWED_ORIGINS = [
     "http://tstweb08",
-    "http://10.117.8.121",  # если обращение с IP
+    "http://10.117.8.121", 
+    "http://localhost", # если обращение с IP
 ]
 
 # Application definition
@@ -84,11 +83,11 @@ WSGI_APPLICATION = 'mainapp.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'prodcast',       # имя вашей базы
+        'NAME': 'prodcast2.0',       # имя вашей базы
         'USER': 'postgres',     # пользователь
         'PASSWORD': '1',
         'HOST': 'localhost',    # или IP/домен сервера
-        'PORT': '5433',         # стандартный порт PostgreSQL
+        'PORT': '5432',         # стандартный порт PostgreSQL
     }
 }
 
@@ -112,7 +111,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTHENTICATION_BACKENDS = [
-    "django_auth_ldap.backend.LDAPBackend",
+    "apiapp.backend.LDAPBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 

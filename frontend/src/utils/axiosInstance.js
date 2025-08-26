@@ -1,8 +1,8 @@
 import axios from "axios";
 import { getAccessToken, getRefreshToken, saveTokens, logout } from "./auth";
-
+import API from "../links.jsx"
 const api = axios.create({
-  baseURL: "http://10.117.8.121:8000/api",
+  baseURL: API,
 });
 
 // Добавляем access токен в каждый запрос
@@ -29,7 +29,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const res = await axios.post("http://10.117.8.121:8000/api/token/refresh/", {
+        const res = await axios.post(`${API}/token/refresh/`, {
           refresh: getRefreshToken(),
         });
         saveTokens({
