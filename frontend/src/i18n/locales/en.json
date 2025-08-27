@@ -75,5 +75,9 @@
     "server": "Server",
     "model": "Model",
     "event": "Event",
-    "approved": "Approved"
+    "approved": "Approved",
+    "startScenario": "Start Scenario",
+    "selectScenario": "Select Scenario",
+    "start_date_on_schedule": "Start Date (Scheduled)",
+    "end_date_on_schedule": "End Date (Scheduled)"
 }

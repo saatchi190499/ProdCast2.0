@@ -75,6 +75,10 @@
     "server": "Сервер",
     "model": "Модель",
     "event": "Событие",
-    "approved": "Одобрено"
-    
+    "approved": "Одобрено",
+    "startScenario": "Запустить сценарий",
+    "selectScenario": "Выберите сценарий",
+    "start_date_on_schedule": "Дата начала (по расписанию)",
+    "end_date_on_schedule": "Дата окончания (по расписанию)"
+
 }

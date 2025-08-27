@@ -3,6 +3,8 @@ import { Card, Button, Form, Table, Modal, ToggleButton, ButtonGroup } from "rea
 import api from "../../utils/axiosInstance";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
+import StartScenarioModal from "./StartScenarioModal";
+
 function ScenarioTable({ scenarios, sortKey, sortAsc, onSort }) {
   const { t } = useTranslation();
   const columns = [
@@ -87,6 +89,9 @@ export default function ScenariosPage() {
   const [showOnlyUser, setShowOnlyUser] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
   const { t } = useTranslation();
+
+  const [showStartModal, setShowStartModal] = useState(false);
+  const [selectedScenarioId, setSelectedScenarioId] = useState("");
 
   useEffect(() => {
     api.get("/scenarios/all/").then(res => setScenarios(res.data));
@@ -188,9 +193,14 @@ export default function ScenariosPage() {
             style={{ fontWeight: "bold" }}
           />
           {role !== "guest" && (
-            <Button variant="primary" onClick={() => setShowModal(true)}>
-              {t("createScenario")}
-            </Button>
+            <>
+              <Button variant="primary" onClick={() => setShowModal(true)}>
+                {t("createScenario")}
+              </Button>
+              <Button variant="warning" onClick={() => setShowStartModal(true)}>
+                {t("startScenario")}
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -201,6 +211,7 @@ export default function ScenariosPage() {
         sortAsc={sortAsc}
         onSort={handleSort}
       />
+      {/* Create Scenario Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered>
         <Modal.Header closeButton>
           <Modal.Title>{t("createScenario")}</Modal.Title>
@@ -257,6 +268,14 @@ export default function ScenariosPage() {
           </Button>
         </Modal.Footer>
       </Modal>
+      {/* Start Scenario Modal */}
+      <StartScenarioModal
+        show={showStartModal}
+        onHide={() => setShowStartModal(false)}
+        scenarios={sortedScenarios}
+        currentUser={currentUser}
+        onStarted={() => {/* refresh scenarios if needed */ }}
+      />
     </Card>
   );
 }
