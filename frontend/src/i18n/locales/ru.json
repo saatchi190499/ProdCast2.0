@@ -63,5 +63,18 @@
     "createError": "Ошибка при создании компонента",
     "loadErrorComponents": "Ошибка загрузки компонентов",
     "editOnlyAuthor": "Только автор или админ может редактировать события",
-    "date": "Дата"
+    "date": "Дата",
+    "show mine": "Показать мои",
+    "createScenario": "Создать сценарий",
+    "enterComponentName": "Введите название компонента",
+    "enterDescription": "Введите описание",
+    "selectComponent": "Выберите компонент",
+    "status": "Статус",
+    "start_date": "Дата начала",
+    "end_date": "Дата окончания",
+    "server": "Сервер",
+    "model": "Модель",
+    "event": "Событие",
+    "approved": "Одобрено"
+    
 }

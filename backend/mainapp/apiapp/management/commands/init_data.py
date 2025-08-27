@@ -5,7 +5,7 @@ class Command(BaseCommand):
     help = "Initialize default DataSources and ObjectTypes"
 
     def handle(self, *args, **kwargs):
-        for name in ["Models", "Events", "Results"]:
+        for name in ["Models", "Events"]:
             DataSource.objects.get_or_create(data_source_name=name)
 
         for name in ["WELL", "PIPE", "SOURCE"]:

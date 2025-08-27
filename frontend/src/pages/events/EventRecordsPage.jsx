@@ -187,16 +187,15 @@ export default function EventRecordsPage() {
           }
           return cleanRow;
         });
-        const updated = [...records, ...parsed];
-
-        setRecords(updated);
+        // Replace table data instead of appending
+        setRecords(parsed);
 
         const updatedErrorsMap = {};
-        updated.forEach((r, idx) => {
+        parsed.forEach((r, idx) => {
           updatedErrorsMap[idx] = validateRow(r);
         });
         setErrorsMap(updatedErrorsMap);
-        applyFiltersAndSorting(updated);
+        applyFiltersAndSorting(parsed);
       },
       error: (err) => alert(t("parseError") + ": " + err.message)
     });

@@ -19,6 +19,7 @@ export default function DataSourcePage() {
   const [sortKey, setSortKey] = useState(null);
   const [sortAsc, setSortAsc] = useState(true);
   const [searchText, setSearchText] = useState("");
+  const [showOnlyUser, setShowOnlyUser] = useState(false);
 
   const formatDate = (iso) => {
     if (!iso) return "";
@@ -48,9 +49,9 @@ export default function DataSourcePage() {
       return isAUser === isBUser ? 0 : isAUser ? -1 : 1;
     });
 
-  const filteredComponents = sortedComponents.filter(c =>
-    c.name.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filteredComponents = sortedComponents
+    .filter(c => c.name.toLowerCase().includes(searchText.toLowerCase()))
+    .filter(c => !showOnlyUser || c.created_by === user?.username);
 
 
   const handleCreate = async () => {
@@ -165,19 +166,33 @@ export default function DataSourcePage() {
         </Modal>
 
         <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-          <Card.Title className="mb-0">
-            📘 {t("componentsFor")}: {sourceName}
-          </Card.Title>
-          <Form.Control
-            type="text"
-            placeholder={t("search")}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ maxWidth: 250 }}
-          />
-          <Button onClick={() => setShowModal(true)} variant="success">
-            ➕ {t("addComponent")}
-          </Button>
+          <div className="d-flex align-items-center gap-3">
+            <Card.Title className="mb-0">
+              {sourceName}
+            </Card.Title>
+            <Form.Control
+              type="text"
+              placeholder={t("search")}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ maxWidth: 250 }}
+            />
+          </div>
+          <div className="d-flex align-items-center gap-3">
+            <Form.Check
+              type="switch"
+              id="showOnlyUserSwitch"
+              label={t("show mine")}
+              checked={showOnlyUser}
+              onChange={() => setShowOnlyUser(v => !v)}
+              style={{ fontWeight: "bold" }}
+            />
+            {role !== "guest" && (
+              <Button onClick={() => setShowModal(true)} variant="success">
+                ➕ {t("addComponent")}
+              </Button>
+            )}
+          </div>
         </div>
         {components.length === 0 ? (
           <p>{t("noComponents")}</p>
@@ -187,20 +202,25 @@ export default function DataSourcePage() {
               <thead className="table-secondary sticky-top">
                 <tr>
                   <th onClick={() => handleSort("name")} style={{ cursor: "pointer" }}>
-                    {t("componentName")} ⬍
+                    {t("componentName")}
+                    {sortKey === "name" && (sortAsc ? " ▲" : " ▼")}
                   </th>
                   <th onClick={() => handleSort("created_date")} style={{ cursor: "pointer" }}>
-                    {t("created")} ⬍
+                    {t("created")}
+                    {sortKey === "created_date" && (sortAsc ? " ▲" : " ▼")}
                   </th>
                   <th onClick={() => handleSort("created_by")} style={{ cursor: "pointer" }}>
-                    {t("author")} ⬍
+                    {t("author")}
+                    {sortKey === "created_by" && (sortAsc ? " ▲" : " ▼")}
                   </th>
                   <th onClick={() => handleSort("last_updated")} style={{ cursor: "pointer" }}>
-                    {t("updated")} ⬍
+                    {t("updated")}
+                    {sortKey === "last_updated" && (sortAsc ? " ▲" : " ▼")}
                   </th>
                   <th>{t("file")}</th>
                   <th onClick={() => handleSort("description")} style={{ cursor: "pointer" }}>
-                    {t("componentDescription")} ⬍
+                    {t("componentDescription")}
+                    {sortKey === "description" && (sortAsc ? " ▲" : " ▼")}
                   </th>
                   <th></th>
                 </tr>
@@ -216,7 +236,7 @@ export default function DataSourcePage() {
                       ) {
                         navigate(`/components/${c.id}/events`);
                       } else if (sourceName === "Events") {
-                        alert("Только автор или админ может редактировать события.");
+                        alert(t("editOnlyAuthor"));
                       }
                     }}>
                     <td>{c.name}</td>
@@ -226,7 +246,7 @@ export default function DataSourcePage() {
                     <td>
                       {c.file ? (
                         <a
-                          href={`http://10.117.8.121:8000${c.file}`}
+                          href={`${api}${c.file}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           download

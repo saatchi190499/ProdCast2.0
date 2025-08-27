@@ -2,6 +2,7 @@ from .views.login_view import LDAPLoginView
 from .views.admin_view import UserListView, change_user_role
 from .views.me_view import MeView
 from .views.scenario_components_view import *
+from .views.scenario_view import *
 from .views.object_meta_data_view import *
 from .views.unit_view import *
 
@@ -30,4 +31,7 @@ urlpatterns = [
     path("object-metadata/", ObjectMetadataView.as_view()),
     path("unit-system-property-mapping/", UnitSystemPropertyMappingView.as_view()),
 
+    path('scenarios/create/', ScenarioCreateView.as_view(), name='scenario-create'),
+    path('scenarios/all/', ScenarioListView.as_view(), name='scenarios-all'),
+    path('components/by-data-source/', ComponentsByDataSourceView.as_view(), name='components-by-data-source'),
 ]

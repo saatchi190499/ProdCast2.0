@@ -1,6 +1,6 @@
 # views.py
 
-from ..models import ScenarioComponent, DataSource, MainClass
+from ..models import ScenarioComponent, DataSource, MainClass, ScenarioClass
 from ..serializers import ScenarioComponentSerializer, DataSourceSerializer, MainClassSerializer
 from rest_framework import status
 from rest_framework.views import APIView

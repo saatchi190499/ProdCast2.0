@@ -63,5 +63,17 @@
     "createError": "Error creating component",
     "loadErrorComponents": "Error loading components",
     "editOnlyAuthor": "Only the author or admin can edit events",
-    "date": "Date"
+    "date": "Date",
+    "show mine": "Show mine",
+    "createScenario": "Create Scenario",
+    "enterComponentName": "Enter component name",
+    "enterDescription": "Enter description",
+    "selectComponent": "Select component",
+    "status": "Status",
+    "start_date": "Start Date",
+    "end_date": "End Date",
+    "server": "Server",
+    "model": "Model",
+    "event": "Event",
+    "approved": "Approved"
 }
