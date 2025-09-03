@@ -5,6 +5,7 @@ from .views.scenario_components_view import *
 from .views.scenario_view import *
 from .views.object_meta_data_view import *
 from .views.unit_view import *
+from .views.run_calculation_view import *
 
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -34,4 +35,10 @@ urlpatterns = [
     path('scenarios/create/', ScenarioCreateView.as_view(), name='scenario-create'),
     path('scenarios/all/', ScenarioListView.as_view(), name='scenarios-all'),
     path('components/by-data-source/', ComponentsByDataSourceView.as_view(), name='components-by-data-source'),
+
+    path("scenarios/<int:scenario_id>/start/", RunCalculationView.as_view(), name="start-scenario"),
+    path("scenarios/<int:scenario_id>/logs/", ScenarioLogsView.as_view(), name="scenario-logs"),
+    path("workers/schedule/", workers_schedule_view),
+
+    #path("task-status/<str:task_id>/", get_task_status),
 ]

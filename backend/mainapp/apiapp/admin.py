@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from .models import (
     UnitSystem, UnitType, UnitDefinition, UnitCategory, UnitSystemCategoryDefinition,
     DataSource, ScenarioComponent, ServersClass, ScenarioClass, ScenarioComponentLink,
-    ObjectType, ObjectInstance, ObjectTypeProperty, MainClass
+    ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, ScenarioLog
 )
 
 # --- New Unit System Models ---
@@ -112,14 +112,24 @@ class ServersClassAdmin(admin.ModelAdmin):
 # ---------- Scenario ----------
 @admin.register(ScenarioClass)
 class ScenarioClassAdmin(admin.ModelAdmin):
-    list_display = ('scenario_name', 'status', 'server', 'is_approved', 'start_date', 'end_date', 'created_date', 'created_by')
+    list_display = (
+        'scenario_name', 
+        'status', 
+        'server', 
+        'task_id',  # добавлено
+        'is_approved', 
+        'start_date', 
+        'end_date', 
+        'created_date', 
+        'created_by'
+    )
     list_filter = ('status', 'server', 'is_approved', 'created_by')
     search_fields = ('scenario_name', 'description')
-    readonly_fields = ('created_date', 'created_by')
+    readonly_fields = ('created_date', 'created_by', 'task_id')  # task_id readonly
 
     fieldsets = (
         (None, {
-            'fields': ('scenario_name', 'description', 'status', 'server', 'is_approved')
+            'fields': ('scenario_name', 'description', 'status', 'task_id', 'server', 'is_approved')
         }),
         ('Date Range', {
             'fields': ('start_date', 'end_date')
@@ -130,6 +140,14 @@ class ScenarioClassAdmin(admin.ModelAdmin):
         }),
     )
 
+
+@admin.register(ScenarioLog)
+class ScenarioLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "scenario", "timestamp", "progress", "message")
+    list_filter = ("scenario", "timestamp", "progress")
+    search_fields = ("scenario__scenario_name", "message")
+    ordering = ("-timestamp",)
+    readonly_fields = ("timestamp",)
 
 # ---------- Scenario ↔ Component Link ----------
 @admin.register(ScenarioComponentLink)

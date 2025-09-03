@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     ScenarioClass, ServersClass, ScenarioComponent, ScenarioComponentLink,
-    ObjectType, ObjectInstance, ObjectTypeProperty, DataSource, MainClass
+    ObjectType, ObjectInstance, ObjectTypeProperty, DataSource, MainClass, ScenarioLog
 )
 
 # ---------- Servers ----------
@@ -61,6 +61,10 @@ class ScenarioClassSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['scenario_id', 'created_by', 'created_date']
 
+class ScenarioLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScenarioLog
+        fields = '__all__'
 
 # ---------- Связь Scenario ↔ Component ----------
 class ScenarioComponentLinkSerializer(serializers.ModelSerializer):

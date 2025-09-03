@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 # --- New Unit System Models ---
 
@@ -211,6 +212,7 @@ class ScenarioClass(models.Model):
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
 
+    task_id = models.CharField(max_length=255, blank=True, null=True)
     server = models.ForeignKey(ServersClass, on_delete=models.SET_NULL, null=True, verbose_name="Server")
     is_approved = models.BooleanField(default=False)
 
@@ -226,6 +228,16 @@ class ScenarioClass(models.Model):
         verbose_name_plural = "Scenarios" # Corrected from verbose_plural
         ordering = ["-created_date"]
 
+class ScenarioLog(models.Model):
+    scenario = models.ForeignKey("ScenarioClass", on_delete=models.CASCADE, related_name="logs")
+    timestamp = models.DateTimeField(default=timezone.now)
+    message = models.TextField()
+    progress = models.IntegerField(default=0)  # % прогресса
+    
+    class Meta:
+        db_table = 'apiapp_scenariolog'
+        verbose_name = "ScenarioLog"
+        verbose_name_plural = "ScenarioLogs"
 
 # ---------- Scenario ↔ Component Link ----------
 class ScenarioComponentLink(models.Model):

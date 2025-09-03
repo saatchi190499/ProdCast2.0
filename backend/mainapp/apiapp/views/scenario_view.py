@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from ..models import ScenarioClass, ScenarioComponent, ScenarioComponentLink, DataSource
-from ..serializers import ScenarioClassSerializer, ScenarioComponentSerializer
+from ..serializers import ScenarioClassSerializer, ScenarioComponentSerializer, ScenarioLogSerializer
 from django.shortcuts import get_object_or_404
 
 class ScenarioCreateView(APIView):
@@ -95,3 +95,10 @@ class ScenarioListView(APIView):
                 "components": components
             })
         return Response(result)
+    
+class ScenarioLogsView(APIView):
+    def get(self, request, scenario_id):
+        scenario = ScenarioClass.objects.get(scenario_id=scenario_id)
+        logs = scenario.logs.order_by("timestamp")
+        serializer = ScenarioLogSerializer(logs, many=True)
+        return Response(serializer.data)

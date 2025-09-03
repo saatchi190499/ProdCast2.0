@@ -9,7 +9,7 @@ export default function StartScenarioModal({ show, onHide, scenarios, currentUse
   const [searchText, setSearchText] = useState(""); // mini search
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState(""); // end schedule date
-  const [server, setServer] = useState("");
+
   const [loading, setLoading] = useState(false);
 
   // Only allow user's own scenarios
@@ -32,7 +32,6 @@ export default function StartScenarioModal({ show, onHide, scenarios, currentUse
           api.post(`/scenarios/${sid}/start/`, {
             start_date: startDate,
             end_date: endDate,
-            server,
           })
         )
       );
@@ -42,9 +41,9 @@ export default function StartScenarioModal({ show, onHide, scenarios, currentUse
       setSelectedIds([]);
       setStartDate("");
       setEndDate("");
-      setServer("");
       setSearchText("");
     } catch (err) {
+      console.error("Ошибка при старте сценария:", err.response?.status, err.response?.data || err.message);
       alert(t("startError"));
       setLoading(false);
     }
@@ -98,15 +97,6 @@ export default function StartScenarioModal({ show, onHide, scenarios, currentUse
               onChange={e => setEndDate(e.target.value)}
             />
           </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>{t("server")}</Form.Label>
-            <Form.Control
-              type="text"
-              value={server}
-              onChange={e => setServer(e.target.value)}
-              placeholder={t("enterServer")}
-            />
-          </Form.Group>
         </Form>
       </Modal.Body>
       <Modal.Footer>
@@ -116,7 +106,7 @@ export default function StartScenarioModal({ show, onHide, scenarios, currentUse
         <Button
           variant="primary"
           onClick={handleStart}
-          disabled={loading || !startDate || !endDate || !server || selectedIds.length === 0}
+          disabled={loading || !startDate || !endDate || selectedIds.length === 0}
         >
           {t("start")}
         </Button>

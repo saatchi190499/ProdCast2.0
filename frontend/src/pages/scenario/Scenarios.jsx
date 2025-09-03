@@ -4,8 +4,10 @@ import api from "../../utils/axiosInstance";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
 import StartScenarioModal from "./StartScenarioModal";
+import { FaRegClipboard } from "react-icons/fa";
+import WorkerStatusPanel from "./WorkerStatusModal";
 
-function ScenarioTable({ scenarios, sortKey, sortAsc, onSort }) {
+function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs }) {
   const { t } = useTranslation();
   const columns = [
     { key: "scenario_name", label: t("componentName") },
@@ -47,7 +49,20 @@ function ScenarioTable({ scenarios, sortKey, sortAsc, onSort }) {
             <td>{s.scenario_name}</td>
             <td>{s.created_by || "—"}</td>
             <td>{s.created_date ? new Date(s.created_date).toLocaleString() : "—"}</td>
-            <td>{s.status}</td>
+            <td>
+              {s.status}{" "}
+              {s.progress !== undefined && s.progress !== null && (
+                <span>({s.progress}%)</span>
+              )}
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => onShowLogs(s)}
+                title={t("viewLogs")}
+              >
+                <FaRegClipboard />
+              </Button>
+            </td>
             <td>{s.start_date ? new Date(s.start_date).toLocaleString() : "—"}</td>
             <td>{s.end_date ? new Date(s.end_date).toLocaleString() : "—"}</td>
             <td>{s.server || "—"}</td>
@@ -91,10 +106,46 @@ export default function ScenariosPage() {
   const { t } = useTranslation();
 
   const [showStartModal, setShowStartModal] = useState(false);
-  const [selectedScenarioId, setSelectedScenarioId] = useState("");
+
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [logsScenarioName, setLogsScenarioName] = useState("");
+  const [showWorkerPanel, setShowWorkerPanel] = useState(false);
+
+
+  const fetchScenarios = async () => {
+    const res = await api.get("/scenarios/all/");
+    setScenarios(res.data);
+  };
 
   useEffect(() => {
-    api.get("/scenarios/all/").then(res => setScenarios(res.data));
+    const interval = setInterval(async () => {
+      const updatedScenarios = await Promise.all(
+        scenarios.map(async s => {
+          if (s.celery_task_id && s.status !== "done") {
+            try {
+              const res = await api.get(`/scenarios/${s.scenario_id}/status/`);
+              return { ...s, status: res.data.status, progress: res.data.progress };
+            } catch {
+              return s;
+            }
+          }
+          return s;
+        })
+      );
+      setScenarios(updatedScenarios);
+    }, 3000); // каждые 3 сек проверяем
+    return () => clearInterval(interval);
+  }, [scenarios]);
+
+
+  useEffect(() => {
+    fetchScenarios();
+    const interval = setInterval(fetchScenarios, 5000); // обновляем каждые 5 сек
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     api.get("/components/by-data-source/").then(res => setAvailableComponents(res.data));
     // Get current user info (assumes /users/me/ returns {username: ...})
     api.get("/me/").then(res => setCurrentUser(res.data.username));
@@ -105,6 +156,18 @@ export default function ScenariosPage() {
       ...prev,
       [dataSourceId]: componentId
     }));
+  };
+
+  const handleShowLogs = async (s) => {
+    setLogsScenarioName(s.scenario_name);
+    try {
+      const res = await api.get(`/scenarios/${s.scenario_id}/logs/`);
+      setLogs(res.data); // [{timestamp, message, progress}]
+      console.log(res.data);
+      setShowLogsModal(true);
+    } catch (err) {
+      alert(t("failedLoadLogs"));
+    }
   };
 
   const handleSave = async () => {
@@ -200,6 +263,9 @@ export default function ScenariosPage() {
               <Button variant="warning" onClick={() => setShowStartModal(true)}>
                 {t("startScenario")}
               </Button>
+              <Button variant="info" onClick={() => setShowWorkerPanel(true)}>
+                {t("Worker Status")}
+              </Button>
             </>
           )}
         </div>
@@ -210,6 +276,7 @@ export default function ScenariosPage() {
         sortKey={sortKey}
         sortAsc={sortAsc}
         onSort={handleSort}
+        onShowLogs={handleShowLogs}
       />
       {/* Create Scenario Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered>
@@ -268,13 +335,51 @@ export default function ScenariosPage() {
           </Button>
         </Modal.Footer>
       </Modal>
+      <Modal show={showLogsModal} onHide={() => setShowLogsModal(false)} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>{t("Log of scenario:")} {logsScenarioName}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: "400px", overflowY: "auto" }}>
+          <Table bordered size="sm">
+            <thead>
+              <tr>
+                <th>{t("time")}</th>
+                <th>{t("message")}</th>
+                <th>{t("progress")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log, i) => (
+                <tr key={i}>
+                  <td>{new Date(log.timestamp).toLocaleString()}</td>
+                  <td>{log.message}</td>
+                  <td>{log.progress}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowLogsModal(false)}>
+            {t("close")}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal show={showWorkerPanel} onHide={() => setShowWorkerPanel(false)} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Worker Status Panel</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <WorkerStatusPanel />
+        </Modal.Body>
+      </Modal>
       {/* Start Scenario Modal */}
       <StartScenarioModal
         show={showStartModal}
         onHide={() => setShowStartModal(false)}
         scenarios={sortedScenarios}
         currentUser={currentUser}
-        onStarted={() => {/* refresh scenarios if needed */ }}
+        onStarted={fetchScenarios}
       />
     </Card>
   );
