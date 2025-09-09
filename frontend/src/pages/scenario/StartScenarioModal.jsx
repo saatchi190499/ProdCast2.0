@@ -1,27 +1,24 @@
 import { useState } from "react";
-import { Modal, Button, Form } from "react-bootstrap";
+import { Modal, Button, Form, Spinner } from "react-bootstrap";
 import { useTranslation } from "react-i18next";
 import api from "../../utils/axiosInstance";
 
 export default function StartScenarioModal({ show, onHide, scenarios, currentUser, onStarted }) {
   const { t } = useTranslation();
   const [selectedIds, setSelectedIds] = useState([]);
-  const [searchText, setSearchText] = useState(""); // mini search
+  const [searchText, setSearchText] = useState("");
   const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState(""); // end schedule date
-
+  const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Only allow user's own scenarios
   const userScenarios = (scenarios || []).filter(s => s.created_by === currentUser);
   const filteredScenarios = userScenarios.filter(s =>
-    s.scenario_name.toLowerCase().includes(searchText.toLowerCase())
+    (s.scenario_name || "").toLowerCase().includes(searchText.toLowerCase())
   );
 
   const handleSelect = (id) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
-    );
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]);
   };
 
   const handleStart = async () => {
@@ -35,7 +32,6 @@ export default function StartScenarioModal({ show, onHide, scenarios, currentUse
           })
         )
       );
-      setLoading(false);
       onStarted && onStarted();
       onHide();
       setSelectedIds([]);
@@ -45,6 +41,7 @@ export default function StartScenarioModal({ show, onHide, scenarios, currentUse
     } catch (err) {
       console.error("Ошибка при старте сценария:", err.response?.status, err.response?.data || err.message);
       alert(t("startError"));
+    } finally {
       setLoading(false);
     }
   };
@@ -52,20 +49,39 @@ export default function StartScenarioModal({ show, onHide, scenarios, currentUse
   return (
     <Modal show={show} onHide={onHide} centered>
       <Modal.Header closeButton>
-        <Modal.Title>{t("startScenario")}</Modal.Title>
+        <Modal.Title className="ds-title">{t("startScenario")}</Modal.Title>
       </Modal.Header>
+
       <Modal.Body>
         <Form>
           <Form.Group className="mb-3">
-            <Form.Label>{t("selectScenario")}</Form.Label>
+            <Form.Label className="ds-title d-flex justify-content-between align-items-center">
+              <span>{t("selectScenario")}</span>
+              <small className="text-muted">
+                {selectedIds.length > 0 ? `${selectedIds.length} ${t("selected")}` : t("nothingSelected") || ""}
+              </small>
+            </Form.Label>
+
             <Form.Control
               type="text"
               placeholder={t("search")}
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
-              style={{ marginBottom: 8 }}
+              className="ds-input"
+              style={{ marginBottom: 8, maxWidth: 420 }}
             />
-            <div style={{ maxHeight: 200, overflowY: "auto", border: "1px solid #eee", borderRadius: 4, padding: 8 }}>
+
+            {/* Rounded, brand-bordered list wrapper */}
+            <div
+              className="brand-scroll"
+              style={{
+                maxHeight: 220,
+                overflowY: "auto",
+                border: "1px solid var(--brand-outline)",
+                borderRadius: 12,
+                padding: 10
+              }}
+            >
               {filteredScenarios.length === 0 ? (
                 <div className="text-muted">{t("noOwnScenarios")}</div>
               ) : (
@@ -73,43 +89,53 @@ export default function StartScenarioModal({ show, onHide, scenarios, currentUse
                   <Form.Check
                     key={s.scenario_id}
                     type="checkbox"
+                    id={`start-scn-${s.scenario_id}`}
                     label={s.scenario_name}
                     checked={selectedIds.includes(s.scenario_id)}
                     onChange={() => handleSelect(s.scenario_id)}
+                    className="mb-2"
                   />
                 ))
               )}
             </div>
           </Form.Group>
+
           <Form.Group className="mb-3">
-            <Form.Label>{t("start_date_on_schedule")}</Form.Label>
+            <Form.Label className="ds-title">{t("start_date_on_schedule")}</Form.Label>
             <Form.Control
               type="datetime-local"
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
+              className="ds-input"
+              style={{ maxWidth: 260 }}
             />
           </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>{t("end_date_on_schedule")}</Form.Label>
+
+          <Form.Group className="mb-0">
+            <Form.Label className="ds-title">{t("end_date_on_schedule")}</Form.Label>
             <Form.Control
               type="datetime-local"
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
+              className="ds-input"
+              style={{ maxWidth: 260 }}
             />
           </Form.Group>
         </Form>
       </Modal.Body>
+
       <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>
+        <button className="btn btn-ghost" onClick={onHide} disabled={loading}>
           {t("cancel")}
-        </Button>
-        <Button
-          variant="primary"
+        </button>
+        <button
+          className="btn btn-brand"
           onClick={handleStart}
           disabled={loading || !startDate || !endDate || selectedIds.length === 0}
         >
+          {loading ? <Spinner size="sm" className="me-1" /> : null}
           {t("start")}
-        </Button>
+        </button>
       </Modal.Footer>
     </Modal>
   );

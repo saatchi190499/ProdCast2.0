@@ -5,6 +5,7 @@ import { Card, Table, Button, Form, Spinner, Alert } from "react-bootstrap";
 import { saveAs } from "file-saver";
 import Papa from "papaparse";
 import { useTranslation } from "react-i18next";
+import "../DataSourcePage.css";
 
 
 export default function EventRecordsPage() {
@@ -335,15 +336,17 @@ export default function EventRecordsPage() {
   if (error) return <Alert variant="danger">{error}</Alert>;
 
   return (
-    <Card className="p-4">
+    <Card className="ds-card p-4">
       <div className="d-flex justify-content-between mb-3">
-        <h4>📋 {t("eventSet")} — {componentName}</h4>
-        <Button variant="outline-secondary" onClick={() => navigate(-1)}>←  {t("back")}</Button>
+        <h4 className="ds-heading">📋 {t("eventSet")} — {componentName}</h4>
+        <Button variant="none" className="btn-brand" onClick={() => navigate(-1)}>← {t("back")}
+        </Button>
       </div>
       <div className="d-flex flex-wrap gap-2 mb-3">
-        <Button onClick={addEmptyRow}>➕ {t("addRow")}</Button>
-        <Button onClick={removeEmptyRows}>🧹 {t("removeEmpty")}</Button>
-        <Button onClick={handleSave}>💾 {t("save")}</Button>
+        <Button variant="none" className="btn-brand" onClick={addEmptyRow}>{t("addRow")}</Button>
+        <Button variant="none" className="btn-brand" onClick={removeEmptyRows}>{t("removeEmpty")}</Button>
+        <Button variant="none" className="btn-brand" onClick={handleSave}>💾 {t("save")}</Button>
+
         <Form.Group>
           <div className="d-flex align-items-center gap-2">
             <Form.Control
@@ -353,19 +356,16 @@ export default function EventRecordsPage() {
               onChange={handleImportFile}
               style={{ display: "none" }}
             />
-            <Button
-              variant="outline-secondary"
-              onClick={() => document.getElementById("csvFile").click()}
-            >
+            <Button variant="none" className="btn-brand" onClick={() => document.getElementById("csvFile").click()}>
               📎 {t("chooseFile")}
             </Button>
           </div>
         </Form.Group>
-        <Button variant="outline-success" onClick={handleExportCSV}>
+        <Button variant="none" className="btn-brand" onClick={handleExportCSV}>
           {t("csvExport")}
         </Button>
-        <Form.Control type="text" placeholder={t("search")} value={searchText} onChange={(e) => setSearchText(e.target.value)} style={{ maxWidth: 200 }} />
-        <Form.Select value={bulkEdit.field} onChange={(e) => setBulkEdit({ ...bulkEdit, field: e.target.value })} style={{ maxWidth: 150 }}>
+        <Form.Control className="ds-input" type="text" placeholder={t("search")} value={searchText} onChange={(e) => setSearchText(e.target.value)} style={{ maxWidth: 200 }} />
+        <Form.Select className="ds-input" value={bulkEdit.field} onChange={(e) => setBulkEdit({ ...bulkEdit, field: e.target.value })} style={{ maxWidth: 150 }}>
           <option value="">{t("field")}</option>
           <option value="object_type">{t("type")}</option>
           <option value="object_instance">{t("instance")}</option>
@@ -374,10 +374,11 @@ export default function EventRecordsPage() {
           <option value="sub_data_source">{t("category")}</option>
           <option value="description">{t("description")}</option>
         </Form.Select>
-        <Form.Control type="text" placeholder={t("value")} value={bulkEdit.value} onChange={(e) => setBulkEdit({ ...bulkEdit, value: e.target.value })} style={{ maxWidth: 150 }} />
-        <Button variant="outline-primary" onClick={handleBulkEdit}>⚙ {t("apply")}</Button>
+        <Form.Control className="ds-input" type="text" placeholder={t("value")} value={bulkEdit.value} onChange={(e) => setBulkEdit({ ...bulkEdit, value: e.target.value })} style={{ maxWidth: 150 }} />
+        <Button variant="none" className="btn-brand" onClick={handleBulkEdit}>⚙ {t("apply")}</Button>
 
         <Form.Select
+          className="ds-input"
           value={selectedUnitSystemId || ""}
           onChange={e => setSelectedUnitSystemId(Number(e.target.value))}
           style={{ maxWidth: 300 }}
@@ -391,10 +392,10 @@ export default function EventRecordsPage() {
         </Form.Select>
 
       </div>
-      <div style={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto" }}>
-        <Table bordered size="sm" className="rounded">
-          <thead>
-            <tr className="table-secondary sticky-top">
+      <div className="brand-scroll" style={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto" }}>
+        <Table bordered size="sm" className="rounded table-hover ds-table">
+          <thead className="ds-thead sticky-top">
+            <tr>
               {[
                 { key: "date_time", label: t("date") },
                 { key: "object_type", label: t("type") },
@@ -406,7 +407,7 @@ export default function EventRecordsPage() {
                 { key: "actions", label: t("actions") }
               ].map(({ key, label }, idx) => (
                 <th
-                  key={idx}
+                  className={`sortable ${sortKey === key ? "sorted" : ""}`}
                   onClick={() => key !== "actions" && handleSort(key)}
                   style={{ cursor: key !== "actions" ? "pointer" : "default" }}
                 >
@@ -422,15 +423,17 @@ export default function EventRecordsPage() {
               const dateOnly = r.date_time.split('T')[0];
               return (
                 <tr key={i}>
-                  <td style={{ backgroundColor: error.date_time ? '#ffe6e6' : 'transparent' }}>
+                  <td className={error.date_time ? 'cell-error' : ''}>
                     <Form.Control
+                    className="ds-input"
                       type="date"
                       value={dateOnly}
                       onChange={(e) => handleChange(i, "date_time", e.target.value)}
                     />
                   </td>
-                  <td style={{ backgroundColor: error.object_type ? '#ffe6e6' : 'transparent' }}>
+                  <td className={error.object_type ? 'cell-error' : ''}>
                     <Form.Select
+                    className="ds-input"
                       value={r.object_type || ""}
                       onChange={(e) => handleChange(i, "object_type", e.target.value)}>
                       <option value="">Select Type</option>
@@ -439,8 +442,9 @@ export default function EventRecordsPage() {
                       ))}
                     </Form.Select>
                   </td>
-                  <td style={{ backgroundColor: error.object_instance ? '#ffe6e6' : 'transparent' }}>
+                  <td className={error.object_instance ? 'cell-error' : ''}>
                     <Form.Select
+                    className="ds-input"
                       value={r.object_instance || ""}
                       onChange={(e) => handleChange(i, "object_instance", e.target.value)}>
                       <option value="">Select Instance</option>
@@ -451,6 +455,7 @@ export default function EventRecordsPage() {
                   </td>
                   <td style={{ backgroundColor: error.object_type_property ? '#ffe6e6' : 'transparent' }}>
                     <Form.Select
+                    className="ds-input"
                       value={r.object_type_property || ""}
                       onChange={(e) => handleChange(i, "object_type_property", e.target.value)}>
                       <option value="">Select Property</option>
@@ -459,9 +464,10 @@ export default function EventRecordsPage() {
                       ))}
                     </Form.Select>
                   </td>
-                  <td style={{ backgroundColor: error.value ? '#ffe6e6' : 'transparent' }}>
+                  <td className={error.object_type_property ? 'cell-error' : ''}>
                     <div className="d-flex align-items-center">
                       <Form.Control
+                      className="ds-input"
                         type="number"
                         value={(() => {
                           // Show the input as-is if not a valid number
@@ -497,6 +503,7 @@ export default function EventRecordsPage() {
                   </td>
                   <td>
                     <Form.Control
+                    className="ds-input"
                       type="text"
                       value={r.sub_data_source || ""}
                       onChange={(e) => handleChange(i, "sub_data_source", e.target.value)}
@@ -510,12 +517,7 @@ export default function EventRecordsPage() {
                     />
                   </td>
                   <td className="text-center">
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      onClick={() => handleDeleteRow(i)}>
-                      🗑
-                    </Button>
+                    <Button variant="none" className="btn-danger-outline" size="sm" onClick={() => handleDeleteRow(i)}>🗑</Button>
                   </td>
                 </tr>
               );

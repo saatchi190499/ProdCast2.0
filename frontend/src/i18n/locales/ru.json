@@ -79,6 +79,18 @@
     "startScenario": "Запустить сценарий",
     "selectScenario": "Выберите сценарий",
     "start_date_on_schedule": "Дата начала (по расписанию)",
-    "end_date_on_schedule": "Дата окончания (по расписанию)"
+    "end_date_on_schedule": "Дата окончания (по расписанию)",
+    "serverStatus": "Статус сервера",
+    "noScenarios": "Нет сценариев",
+    "scenarioId": "ID сценария",
+    "servers": "Серверы",
+    "serverId": "ID сервера",
+    "noWorkersFound": "Рабочие не найдены",
+    "noServersFound": "Серверы не найдены",
+    "start" : "Запустить",
+    "noTasks": "Задачи не найдены",
+    "loading": "Загрузка...",
+    "failedLoadWorkers": "Не удалось загрузить рабочих",
+    "nothingSelected": "Ничего не выбрано"
 
 }

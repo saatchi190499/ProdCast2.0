@@ -1,22 +1,41 @@
+import { forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
 import { Button } from "react-bootstrap";
-import { FaGlobe } from "react-icons/fa"
+import { FaGlobe } from "react-icons/fa";
 
-export default function LanguageSwitcher() {
+const LanguageSwitcher = forwardRef(function LanguageSwitcher(
+  { showIcon = true, className = "", ...props },
+  ref
+) {
   const { i18n } = useTranslation();
-  const { theme } = useTheme(); 
+  const isRu = i18n.language === "ru";
+  const title = isRu ? "Switch to English" : "Сменить на Русский";
+
+  const handleClick = () => i18n.changeLanguage(isRu ? "en" : "ru");
 
   return (
     <Button
+      ref={ref}
       variant="link"
       size="sm"
-      onClick={() => i18n.changeLanguage(i18n.language === "ru" ? "en" : "ru")}
-      title={i18n.language === "ru" ? "Switch to English" : "Сменить на Русский"}
-      className="p-0 m-0 border-0"
-      style={{ boxShadow: "none" }}
+      onClick={handleClick}
+      title={title}
+      aria-label={title}
+      className={`p-0 m-0 border-0 ${className}`}
+      style={{
+        boxShadow: "none",
+        color: "var(--sidebar-fg)", // 👈 tie to sidebar color
+      }}
+      {...props}
     >
-      <FaGlobe size={18} color={theme === "light" ? "black" : "white"} />
+      {showIcon ? (
+        <FaGlobe size={18} />
+      ) : (
+        <span className="visually-hidden">{title}</span>
+      )}
     </Button>
   );
-}
+});
+
+export default LanguageSwitcher;

@@ -1,0 +1,317 @@
+/* =========================
+   EventRecordsPage — Brand-only system (#1DACBE)
+   ========================= */
+
+/* ---------- Brand tokens ---------- */
+:root {
+  --brand: #1dacbe;
+  --brand-700: #1799ab;          /* hover */
+  --brand-800: #137f8f;          /* active */
+  --brand-50a: rgba(29, 172, 190, 0.06);  /* soft tint */
+  --brand-100a: rgba(29, 172, 190, 0.12); /* stronger tint */
+  --brand-200a: rgba(29, 172, 190, 0.20);
+  --brand-outline: rgba(29, 172, 190, 0.45);
+  --brand-shadow: 0 8px 24px rgba(29, 172, 190, 0.15);
+  --brand-focus: 0 0 0 0.25rem rgba(29, 172, 190, 0.35);
+  --brand-text-on: #ffffff;
+}
+
+/* Dark theme support (Bootstrap or custom) */
+html[data-bs-theme="dark"], body.dark, :root.dark {
+  --brand-50a: rgba(29, 172, 190, 0.10);
+  --brand-100a: rgba(29, 172, 190, 0.18);
+  --brand-200a: rgba(29, 172, 190, 0.26);
+  --brand-outline: rgba(29, 172, 190, 0.55);
+  --brand-shadow: 0 8px 24px rgba(29, 172, 190, 0.20);
+  --brand-focus: 0 0 0 0.25rem rgba(29, 172, 190, 0.45);
+}
+
+/* =========================
+   Components
+   ========================= */
+
+/* ---------- Card + headings ---------- */
+.ds-card {
+  border: 1px solid var(--brand-outline);
+  box-shadow: var(--brand-shadow);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.ds-heading,
+.ds-title,
+.ds-card .card-title {
+  color: var(--brand);
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* ---------- Inputs ---------- */
+.ds-input {
+  border: 1px solid var(--brand-outline) !important;
+  background: transparent;
+}
+.ds-input:focus {
+  border-color: var(--brand) !important;
+  box-shadow: var(--brand-focus) !important;
+  outline: none;
+}
+
+/* Switch (Bootstrap .form-switch) */
+.brand-switch .form-check-input {
+  border-color: var(--brand-outline);
+  background-color: transparent;
+  accent-color: var(--brand);
+}
+.brand-switch .form-check-input:checked {
+  background-color: var(--brand);
+  border-color: var(--brand);
+  box-shadow: var(--brand-focus);
+}
+.brand-switch .form-check-label {
+  font-weight: 600;
+}
+
+/* ---------- Links ---------- */
+.brand-link {
+  color: var(--brand);
+  text-decoration: none;
+  font-weight: 600;
+}
+.brand-link:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Buttons ---------- */
+.btn-brand {
+  background: var(--brand);
+  color: var(--brand-text-on);
+  border-radius: 12px;
+  padding: 0.45rem 1rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border: 1px solid var(--brand) !important; /* keep visible across states */
+}
+.btn-brand:hover,
+.btn-brand:focus {
+  background: var(--brand-700);
+  border-color: var(--brand-700);
+  box-shadow: var(--brand-focus);
+  color: var(--brand-text-on);
+}
+.btn-brand:active {
+  background: var(--brand-800) !important;
+  border-color: var(--brand-800) !important;
+}
+.btn-brand:focus-visible {
+  outline: none;
+  box-shadow: var(--brand-focus) !important;
+}
+
+/* Outline */
+.btn-brand-outline {
+  background: transparent;
+  color: var(--brand);
+  border: 1px solid var(--brand);
+  border-radius: 12px;
+  padding: 0.45rem 1rem;
+  font-weight: 700;
+}
+.btn-brand-outline:hover,
+.btn-brand-outline:focus {
+  background: var(--brand-50a);
+  border-color: var(--brand);
+  box-shadow: var(--brand-focus);
+  color: var(--brand);
+}
+
+/* Ghost (neutral but brand-hued) */
+.btn-ghost {
+  background: transparent;
+  color: var(--brand);
+  border-radius: 12px;
+  border: 1px solid var(--brand) !important;
+}
+.btn-ghost:hover,
+.btn-ghost:focus {
+  background: var(--brand-50a);
+  box-shadow: var(--brand-focus);
+}
+
+/* “Danger” outline, kept in brand hue to respect single-color rule */
+.btn-danger-outline {
+  background: transparent !important;
+  color: var(--brand) !important;
+  border: 1px solid var(--brand) !important;
+  border-radius: 10px !important;
+}
+.btn-danger-outline:hover,
+.btn-danger-outline:focus {
+  background: var(--brand-100a) !important;
+  box-shadow: var(--brand-focus) !important;
+}
+
+/* ---------- Table ---------- */
+.ds-table {
+  border-color: var(--brand-outline);
+  overflow: hidden;
+  
+}
+.ds-table thead.ds-thead {
+  background: var(--brand);
+  color: var(--brand-text-on);
+  border: 1px solid var(--brand-outline);
+}
+.ds-table thead.ds-thead th {
+  border-color: var(--brand);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.ds-table tbody td,
+.ds-table thead th {
+  border-color: var(--brand-outline) !important;
+}
+
+/* Sortable headers */
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.sortable.sorted {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Hover rows */
+.ds-row:hover,
+.table-hover > tbody > tr:hover > * {
+  background: var(--brand-50a);
+  transition: background-color 120ms ease;
+}
+
+/* ---------- Badges / HR ---------- */
+.badge-brand {
+  background: var(--brand);
+  color: var(--brand-text-on);
+}
+hr.brand {
+  border-color: var(--brand-outline);
+}
+
+/* ---------- Modal ---------- */
+.modal-content {
+  border: 1px solid var(--brand-outline);
+  box-shadow: var(--brand-shadow);
+}
+.modal-header .modal-title {
+  color: var(--brand);
+}
+.modal-header .btn-close:focus {
+  box-shadow: var(--brand-focus);
+}
+
+/* ---------- Scrollbars ---------- */
+.brand-scroll {
+  scrollbar-color: var(--brand) transparent; /* Firefox */
+}
+.brand-scroll::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.brand-scroll::-webkit-scrollbar-thumb {
+  background: var(--brand-200a);
+  border-radius: 20px;
+}
+.brand-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-100a);
+}
+
+/* ---------- States / Utilities ---------- */
+.cell-error {            /* Error cell tint with brand hue */
+  background: var(--brand-50a) !important;
+}
+
+/* Keep button border visible across all states */
+.btn.btn-brand,
+.btn-brand:hover,
+.btn-brand:focus,
+.btn-brand:active,
+.btn-brand:disabled {
+  border: 1px solid var(--brand) !important;
+}
+
+/* new */
+/* ---------- Select (dropdowns) ---------- */
+.ds-input.form-select {
+  border: 1px solid var(--brand-outline) !important;
+  background-color: transparent;
+  color: inherit;
+  appearance: none; /* remove native arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%231dacbe' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+}
+
+.ds-input.form-select:focus {
+  border-color: var(--brand) !important;
+  box-shadow: var(--brand-focus) !important;
+  outline: none;
+}
+
+.ds-input.form-select option {
+  background-color: #fff;
+  color: #000;
+}
+
+html[data-bs-theme="dark"] .ds-input.form-select option {
+  background-color: #1e1e1e;
+  color: #fff;
+}
+
+.ds-input.form-select option:hover,
+.ds-input.form-select option:checked {
+  background-color: var(--brand-50a);
+  color: var(--brand-800);
+}
+
+/* Extra themes */
+html[data-theme="sunset"] {
+  --brand: #f85a3e;
+  --brand-700: #d94a30;
+  --brand-800: #b53d26;
+  --brand-50a: rgba(248, 90, 62, 0.06);
+  --brand-100a: rgba(248, 90, 62, 0.12);
+  --brand-200a: rgba(248, 90, 62, 0.20);
+  --brand-outline: rgba(248, 90, 62, 0.45);
+  --brand-shadow: 0 8px 24px rgba(248, 90, 62, 0.15);
+  --brand-focus: 0 0 0 0.25rem rgba(248, 90, 62, 0.35);
+  --brand-text-on: #fff;
+}
+
+html[data-theme="forest"] {
+  --brand: #2c9c5c;
+  --brand-700: #23804a;
+  --brand-800: #1a653b;
+  --brand-50a: rgba(44, 156, 92, 0.06);
+  --brand-100a: rgba(44, 156, 92, 0.12);
+  --brand-200a: rgba(44, 156, 92, 0.20);
+  --brand-outline: rgba(44, 156, 92, 0.45);
+  --brand-shadow: 0 8px 24px rgba(44, 156, 92, 0.15);
+  --brand-focus: 0 0 0 0.25rem rgba(44, 156, 92, 0.35);
+  --brand-text-on: #fff;
+}
+
+html[data-theme="violet"] {
+  --brand: #8e44ad;
+  --brand-700: #732d91;
+  --brand-800: #5b2275;
+  --brand-50a: rgba(142, 68, 173, 0.06);
+  --brand-100a: rgba(142, 68, 173, 0.12);
+  --brand-200a: rgba(142, 68, 173, 0.20);
+  --brand-outline: rgba(142, 68, 173, 0.45);
+  --brand-shadow: 0 8px 24px rgba(142, 68, 173, 0.15);
+  --brand-focus: 0 0 0 0.25rem rgba(142, 68, 173, 0.35);
+  --brand-text-on: #fff;
+}

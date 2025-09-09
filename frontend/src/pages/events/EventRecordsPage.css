@@ -1,0 +1,68 @@
+/* =========================
+   Brand-only system (#1DACBE) for EventRecordsPage
+   ========================= */
+:root {
+  --brand: #1dacbe;
+  --brand-700: #1799ab;
+  --brand-800: #137f8f;
+  --brand-50a: rgba(29, 172, 190, 0.06);
+  --brand-100a: rgba(29, 172, 190, 0.12);
+  --brand-200a: rgba(29, 172, 190, 0.20);
+  --brand-outline: rgba(29, 172, 190, 0.45);
+  --brand-shadow: 0 8px 24px rgba(29, 172, 190, 0.15);
+  --brand-focus: 0 0 0 0.25rem rgba(29, 172, 190, 0.35);
+  --brand-text-on: #ffffff;
+}
+
+html[data-bs-theme="dark"], body.dark, :root.dark {
+  --brand-50a: rgba(29, 172, 190, 0.10);
+  --brand-100a: rgba(29, 172, 190, 0.18);
+  --brand-200a: rgba(29, 172, 190, 0.26);
+  --brand-outline: rgba(29, 172, 190, 0.55);
+  --brand-shadow: 0 8px 24px rgba(29, 172, 190, 0.20);
+  --brand-focus: 0 0 0 0.25rem rgba(29, 172, 190, 0.45);
+}
+
+/* Card + headings */
+.ds-card { border: 1px solid var(--brand-outline); box-shadow: var(--brand-shadow); border-radius: 18px; }
+.ds-heading { color: var(--brand); font-weight: 700; letter-spacing: .2px; }
+
+/* Inputs */
+.ds-input { border: 1px solid var(--brand-outline) !important; background: transparent; }
+.ds-input:focus { border-color: var(--brand) !important; box-shadow: var(--brand-focus) !important; }
+
+/* Buttons */
+.btn-brand { background: var(--brand); color: var(--brand-text-on); border: 1px solid var(--brand); border-radius: 12px; padding: .45rem 1rem; font-weight: 700; }
+.btn-brand:hover, .btn-brand:focus { background: var(--brand-700); border-color: var(--brand-700); box-shadow: var(--brand-focus); }
+.btn-brand:active { background: var(--brand-800) !important; border-color: var(--brand-800) !important; }
+
+.btn-brand-outline { background: transparent; color: var(--brand); border: 1px solid var(--brand); border-radius: 12px; padding: .45rem 1rem; font-weight: 700; }
+.btn-brand-outline:hover, .btn-brand-outline:focus { background: var(--brand-50a); box-shadow: var(--brand-focus); }
+
+.btn-ghost { background: transparent; border: 1px dashed var(--brand); color: var(--brand); border-radius: 12px; }
+.btn-ghost:hover, .btn-ghost:focus { background: var(--brand-50a); box-shadow: var(--brand-focus); }
+
+.btn-danger-outline { background: transparent !important; color: var(--brand) !important; border: 1px solid var(--brand) !important; border-radius: 10px !important; }
+.btn-danger-outline:hover, .btn-danger-outline:focus { background: var(--brand-100a) !important; box-shadow: var(--brand-focus) !important; }
+
+/* Keep border visible across states */
+.btn.btn-brand, .btn-brand { border: 1px solid var(--brand) !important; }
+.btn-brand:hover, .btn-brand:focus, .btn-brand:active, .btn-brand:disabled { border: 1px solid var(--brand) !important; }
+.btn-brand:focus-visible { outline: none; box-shadow: var(--brand-focus) !important; }
+
+/* Table */
+.ds-table { border-color: var(--brand-outline); }
+.ds-table thead.ds-thead { background: var(--brand); color: var(--brand-text-on); }
+.ds-table thead.ds-thead th { border-color: var(--brand); position: sticky; top: 0; z-index: 2; }
+.ds-table tbody td, .ds-table thead th { border-color: var(--brand-outline) !important; }
+.sortable { cursor: pointer; user-select: none; }
+.sortable.sorted { text-decoration: underline; text-underline-offset: 4px; }
+
+/* Scrollbar */
+.brand-scroll { scrollbar-color: var(--brand) transparent; }
+.brand-scroll::-webkit-scrollbar { height: 10px; width: 10px; }
+.brand-scroll::-webkit-scrollbar-thumb { background: var(--brand-200a); border-radius: 20px; }
+.brand-scroll::-webkit-scrollbar-thumb:hover { background: var(--brand-100a); }
+
+/* Error cell tint with brand hue */
+.cell-error { background: var(--brand-50a) !important; }

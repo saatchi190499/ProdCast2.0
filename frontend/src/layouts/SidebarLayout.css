@@ -1,0 +1,396 @@
+/* =========================================
+   1) BASE NEUTRALS (own light vs dark)
+   Light/Dark control neutrals only
+========================================= */
+:root {
+  /* layout */
+  --sidebar-w: 248px;
+  --sidebar-w-collapsed: 72px;
+
+  /* neutral surfaces (LIGHT) */
+  --sidebar-bg: var(--bs-body-bg);
+  --sidebar-fg: var(--bs-body-color);
+  --sidebar-border: var(--bs-border-color);
+  --sidebar-hover: rgba(0, 0, 0, 0.04);
+
+  /* default accent (will be replaced by theme) */
+  --accent: #1dacbe;
+  --accent-700: #1799ab;
+  --accent-800: #137f8f;
+  --accent-50a: rgba(29,172,190,0.06);
+  --accent-100a: rgba(29,172,190,0.12);
+  --accent-200a: rgba(29,172,190,0.20);
+
+  /* derive sidebar actives from accent */
+  --sidebar-active-color: var(--accent);
+  --sidebar-active-bg: var(--accent-100a);
+
+  /* icon rhythm */
+  --icon-box: 40px;
+  --icon-gap: 10px;
+}
+
+/* DARK neutral surfaces */
+:root[data-bs-theme="dark"] {
+  --sidebar-bg: #0f1115;
+  --sidebar-fg: #f0f0f0;
+  --sidebar-border: rgba(255,255,255,0.12);
+  --sidebar-hover: rgba(255,255,255,0.06);
+
+  /* active bg slightly stronger in dark */
+  --sidebar-active-bg: color-mix(in oklab, var(--accent) 25%, transparent);
+}
+
+/* Optional: respect system preference if you want */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-bs-theme]) {
+    --sidebar-bg: #0f1115;
+    --sidebar-fg: #f0f0f0;
+    --sidebar-border: rgba(255,255,255,0.12);
+    --sidebar-hover: rgba(255,255,255,0.06);
+    --sidebar-active-bg: color-mix(in oklab, var(--accent) 25%, transparent);
+  }
+}
+
+/* =========================================
+   2) THEMES (ACCENTS ONLY)
+   Themes set accent tokens, not neutrals.
+========================================= */
+
+/* Default (blue/teal) is already defined in :root via --accent... */
+
+:root[data-theme="sunset"] {
+  --accent: #f85a3e;
+  --accent-700: #d94a30;
+  --accent-800: #b53d26;
+  --accent-50a: rgba(248,90,62,0.06);
+  --accent-100a: rgba(248,90,62,0.12);
+  --accent-200a: rgba(248,90,62,0.20);
+  --sidebar-active-color: var(--accent);
+  --sidebar-active-bg: var(--accent-100a);
+}
+
+:root[data-theme="forest"] {
+  --accent: #2c9c5c;
+  --accent-700: #23804a;
+  --accent-800: #1a653b;
+  --accent-50a: rgba(44,156,92,0.06);
+  --accent-100a: rgba(44,156,92,0.12);
+  --accent-200a: rgba(44,156,92,0.20);
+  --sidebar-active-color: var(--accent);
+  --sidebar-active-bg: var(--accent-100a);
+}
+
+:root[data-theme="violet"] {
+  --accent: #8e44ad;
+  --accent-700: #732d91;
+  --accent-800: #5b2275;
+  --accent-50a: rgba(142,68,173,0.06);
+  --accent-100a: rgba(142,68,173,0.12);
+  --accent-200a: rgba(142,68,173,0.20);
+  --sidebar-active-color: var(--accent);
+  --sidebar-active-bg: var(--accent-100a);
+}
+
+/* =========================================
+   3) OPTIONAL DARK TUNING PER THEME
+   Only if you want slightly stronger active bg in dark.
+========================================= */
+:root[data-bs-theme="dark"][data-theme="sunset"],
+:root[data-bs-theme="dark"][data-theme="forest"],
+:root[data-bs-theme="dark"][data-theme="violet"],
+:root[data-bs-theme="dark"]:not([data-theme]) {
+  /* Amplify active bg in dark for better contrast */
+  --sidebar-active-bg: color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+
+/* =========================================
+   APP SHELL & DOCK/OVERLAY BEHAVIOR
+========================================= */
+.app-shell {
+  display: block;
+  min-height: 100vh;
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+/* Light scrim when expanded (overlay mode) */
+.app-shell.expanded::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.04);
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* No scrim when pinned */
+.app-shell.pinned.pinned-skip-scrim::after { content: none; }
+
+/* Docked: push content and remove scrim */
+.app-shell.docked .app-content { margin-left: var(--sidebar-w); }
+.app-shell.docked::after { content: none; }
+
+/* =========================================
+   SIDEBAR PANEL
+========================================= */
+.app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  height: 100vh;
+  width: var(--sidebar-w-collapsed);
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+  border-right: 1px solid var(--sidebar-border);
+  transition: width 160ms ease;
+  z-index: 101;
+
+  /* 3 rows: header / nav (fills) / footer */
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+.app-shell.expanded .app-sidebar { width: var(--sidebar-w); }
+
+/* Content lane (reserves collapsed width by default) */
+.app-content {
+  margin-left: var(--sidebar-w-collapsed);
+  min-height: 100vh;
+  transition: margin-left 160ms ease;
+}
+.app-shell.pinned .app-content { margin-left: var(--sidebar-w); }
+
+.content-inner { padding: 16px; }
+
+/* =========================================
+   TOP BAR
+========================================= */
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 8px 8px 12px;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  padding-left: 5px;
+}
+.brand-emoji { font-size: 20px; line-height: 1; }
+.brand-text { font-size: 16px; }
+
+.pin-btn {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+  border: 1px solid var(--sidebar-border);
+
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.pin-btn:hover { background: var(--sidebar-hover); }
+.pin-btn:active { transform: scale(0.98); }
+
+/* Use brand teal for the pinned state */
+.pin-btn.pinned {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-color);
+  border-color: var(--sidebar-active-color);
+}
+
+/* =========================================
+   NAV LIST + LINKS
+========================================= */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 6px;
+}
+
+.sidebar-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+
+  margin: 2px 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+
+  transition: background 120ms ease, color 120ms ease;
+}
+.sidebar-link:hover { background: var(--sidebar-hover); }
+
+.sidebar-link .link-inner {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+.sidebar-link .icon {
+  width: var(--icon-box);
+  height: var(--icon-box);
+  min-width: var(--icon-box);
+  min-height: var(--icon-box);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border-radius: 8px;
+}
+.sidebar-link .label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Collapsed: icon pill hover only (no row background) */
+.app-shell.collapsed .sidebar-link .icon:hover {
+  background: var(--sidebar-hover);
+}
+
+/* =========================================
+   COLLAPSED LAYOUT TIGHTENING
+========================================= */
+.app-shell.collapsed .sidebar-nav { padding-block: 8px; }
+
+/* Center icon boxes and equalize width */
+.app-shell.collapsed .sidebar-link {
+  margin: var(--icon-gap) auto;
+  padding: 0;
+  width: calc(var(--icon-box) + 8px);
+  border-radius: 12px;
+}
+.app-shell.collapsed .sidebar-link .link-inner { justify-content: center; }
+
+.app-shell.collapsed .sidebar-link:hover,
+.app-shell.collapsed .sidebar-link.active { background: transparent; }
+
+/* Active ring on icon in collapsed mode */
+.app-shell.collapsed .sidebar-link.active .icon {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-color);
+  box-shadow: 0 0 0 4px var(--sidebar-active-bg);
+}
+
+/* =========================================
+   INPUTS DROPDOWN (under "Inputs")
+========================================= */
+.inputs-dd {
+  display: grid;
+  gap: 6px;
+  padding: 6px 8px 8px calc(var(--icon-box) + 10px); /* align under icon */
+}
+
+.inputs-dd-item {
+  display: block;
+  padding: 6px 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 120ms ease, color 120ms ease;
+}
+.inputs-dd-item:hover { background: var(--sidebar-hover); }
+
+/* caret next to Inputs label */
+.caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px; height: 18px;
+}
+
+/* =========================================
+   FOOTER
+========================================= */
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 10px 8px 12px;
+  border-top: 1px solid var(--sidebar-border);
+}
+.footer-actions { display: grid; gap: 10px; }
+
+/* Expanded footer rows (uniform) */
+.fa-row-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: 10px;
+
+  background: var(--bs-body-bg);
+  color: var(--sidebar-fg);
+  border: 1px solid var(--sidebar-border);
+
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.fa-row-btn:hover { background: var(--sidebar-hover); }
+.fa-row-btn:active { transform: scale(0.99); }
+
+.fa-row-btn .fa-left { display: inline-flex; align-items: center; gap: 8px; }
+.fa-row-btn .fa-ico  { width: 18px; height: 18px; display: grid; place-items: center; font-size: 18px; }
+.fa-row-btn .fa-label{ font-weight: 600; white-space: nowrap; }
+.fa-row-btn .fa-right{ display: inline-flex; align-items: center; gap: 6px; }
+
+/* Collapsed compact footer buttons (match nav icons) */
+.app-shell.collapsed .footer-actions {
+  display: grid;
+  justify-items: center;
+  row-gap: var(--icon-gap);
+}
+.action-compact {
+  width: var(--icon-box);
+  height: var(--icon-box);
+  margin: 0;
+  border-radius: 12px;
+
+  display: grid; place-items: center;
+  cursor: pointer;
+
+  background: var(--bs-body-bg);
+  color: inherit;
+  border: 1px solid var(--sidebar-border);
+
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+.action-compact:hover { background: var(--sidebar-hover); }
+.action-compact:active { transform: scale(0.98); }
+.action-compact .icon,
+.action-compact svg { width: 18px; height: 18px; font-size: 18px; display: grid; place-items: center; }
+
+/* =========================================
+   ACTIVE STATES (UNIFIED)
+========================================= */
+.sidebar-link.active,
+.inputs-dd-item.active,
+.flyout-btn.active,
+.fa-row-btn.active,
+.pin-btn.pinned {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-color);
+  font-weight: 600;
+}
+
+/* =========================================
+   NICE-TO-HAVES
+========================================= */
+@media (prefers-reduced-motion: no-preference) {
+  .app-sidebar,
+  .sidebar-link,
+  .fa-row-btn,
+  .action-compact {
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+}

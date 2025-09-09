@@ -79,5 +79,18 @@
     "startScenario": "Start Scenario",
     "selectScenario": "Select Scenario",
     "start_date_on_schedule": "Start Date (Scheduled)",
-    "end_date_on_schedule": "End Date (Scheduled)"
+    "end_date_on_schedule": "End Date (Scheduled)",
+    "serverStatus": "Server Status",
+    "noScenarios": "No scenarios",
+    "scenarioId": "Scenario ID",
+    "noWorkersFound": "No workers found",
+    "noServersFound": "No servers found",
+    "servers": "Servers",
+    "start" : "Start",
+    "noTasks": "No tasks found",
+    "loading": "Loading...",
+    "failedLoadWorkers": "Failed to load workers",
+    "nothingSelected": "Nothing selected"
+    
+
 }

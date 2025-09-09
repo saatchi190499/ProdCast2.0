@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, Button, Form, Table, Modal, ToggleButton, ButtonGroup } from "react-bootstrap";
+import { Card, Button, Form, Table, Modal } from "react-bootstrap";
 import api from "../../utils/axiosInstance";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
@@ -23,67 +23,72 @@ function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs }) {
     { key: "description", label: t("description") }
   ];
 
+  const headerClass = (key) =>
+    "sortable" + (sortKey === key ? " sorted" : "");
+
   return (
-    <Table bordered hover responsive size="sm" className="mb-4">
-      <thead className="table-secondary">
-        <tr>
-          {columns.map(col => (
-            <th
-              key={col.key}
-              style={{ cursor: "pointer" }}
-              onClick={() => onSort(col.key)}
-            >
-              {col.label}
-              {sortKey === col.key && (
-                <span style={{ marginLeft: 4 }}>
-                  {sortAsc ? "▲" : "▼"}
-                </span>
-              )}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {scenarios.map(s => (
-          <tr key={s.scenario_id}>
-            <td>{s.scenario_name}</td>
-            <td>{s.created_by || "—"}</td>
-            <td>{s.created_date ? new Date(s.created_date).toLocaleString() : "—"}</td>
-            <td>
-              {s.status}{" "}
-              {s.progress !== undefined && s.progress !== null && (
-                <span>({s.progress}%)</span>
-              )}
-              <Button
-                variant="link"
-                size="sm"
-                onClick={() => onShowLogs(s)}
-                title={t("viewLogs")}
+    <div className="ds-table-wrapper">
+      <Table bordered hover responsive size="sm" className="rounded table-hover ds-table">
+        <thead className="ds-thead">
+          <tr>
+            {columns.map(col => (
+              <th
+                key={col.key}
+                className={headerClass(col.key)}
+                onClick={() => onSort(col.key)}
+                style={{ cursor: "pointer" }}
               >
-                <FaRegClipboard />
-              </Button>
-            </td>
-            <td>{s.start_date ? new Date(s.start_date).toLocaleString() : "—"}</td>
-            <td>{s.end_date ? new Date(s.end_date).toLocaleString() : "—"}</td>
-            <td>{s.server || "—"}</td>
-            <td>
-              {(s.components || [])
-                .filter(c => c.data_source_name === "Models")
-                .map(c => c.name)
-                .join(", ") || "—"}
-            </td>
-            <td>
-              {(s.components || [])
-                .filter(c => c.data_source_name === "Events")
-                .map(c => c.name)
-                .join(", ") || "—"}
-            </td>
-            <td>{s.is_approved ? "✔" : "—"}</td>
-            <td>{s.description}</td>
+                {col.label}
+                {sortKey === col.key && (
+                  <span style={{ marginLeft: 6 }}>{sortAsc ? "▲" : "▼"}</span>
+                )}
+              </th>
+            ))}
           </tr>
-        ))}
-      </tbody>
-    </Table>
+        </thead>
+        <tbody>
+          {scenarios.map(s => (
+            <tr key={s.scenario_id} className="ds-row">
+              <td>{s.scenario_name}</td>
+              <td>{s.created_by || "—"}</td>
+              <td>{s.created_date ? new Date(s.created_date).toLocaleString() : "—"}</td>
+              <td>
+                {s.status}{" "}
+                {s.progress !== undefined && s.progress !== null && (
+                  <span>({s.progress}%)</span>
+                )}
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={() => onShowLogs(s)}
+                  title={t("viewLogs")}
+                  className="brand-link"
+                >
+                  <FaRegClipboard />
+                </Button>
+              </td>
+              <td>{s.start_date ? new Date(s.start_date).toLocaleString() : "—"}</td>
+              <td>{s.end_date ? new Date(s.end_date).toLocaleString() : "—"}</td>
+              <td>{s.server || "—"}</td>
+              <td>
+                {(s.components || [])
+                  .filter(c => c.data_source_name === "Models")
+                  .map(c => c.name)
+                  .join(", ") || "—"}
+              </td>
+              <td>
+                {(s.components || [])
+                  .filter(c => c.data_source_name === "Events")
+                  .map(c => c.name)
+                  .join(", ") || "—"}
+              </td>
+              <td>{s.is_approved ? "✔" : "—"}</td>
+              <td>{s.description}</td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </div>
   );
 }
 
@@ -112,7 +117,6 @@ export default function ScenariosPage() {
   const [logsScenarioName, setLogsScenarioName] = useState("");
   const [showWorkerPanel, setShowWorkerPanel] = useState(false);
 
-
   const fetchScenarios = async () => {
     const res = await api.get("/scenarios/all/");
     setScenarios(res.data);
@@ -134,20 +138,18 @@ export default function ScenariosPage() {
         })
       );
       setScenarios(updatedScenarios);
-    }, 3000); // каждые 3 сек проверяем
+    }, 3000);
     return () => clearInterval(interval);
   }, [scenarios]);
 
-
   useEffect(() => {
     fetchScenarios();
-    const interval = setInterval(fetchScenarios, 5000); // обновляем каждые 5 сек
+    const interval = setInterval(fetchScenarios, 5000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     api.get("/components/by-data-source/").then(res => setAvailableComponents(res.data));
-    // Get current user info (assumes /users/me/ returns {username: ...})
     api.get("/me/").then(res => setCurrentUser(res.data.username));
   }, [showModal, saving]);
 
@@ -162,8 +164,7 @@ export default function ScenariosPage() {
     setLogsScenarioName(s.scenario_name);
     try {
       const res = await api.get(`/scenarios/${s.scenario_id}/logs/`);
-      setLogs(res.data); // [{timestamp, message, progress}]
-      console.log(res.data);
+      setLogs(res.data);
       setShowLogsModal(true);
     } catch (err) {
       alert(t("failedLoadLogs"));
@@ -192,10 +193,9 @@ export default function ScenariosPage() {
     setSaving(false);
   };
 
-
   // Filter scenarios by search and user
   const filteredScenarios = scenarios.filter(s => {
-    const matchesSearch = s.scenario_name.toLowerCase().includes(searchText.toLowerCase());
+    const matchesSearch = (s.scenario_name || "").toLowerCase().includes(searchText.toLowerCase());
     const matchesUser = !showOnlyUser || (s.created_by === currentUser);
     return matchesSearch && matchesUser;
   });
@@ -204,21 +204,17 @@ export default function ScenariosPage() {
     let aVal = a[sortKey];
     let bVal = b[sortKey];
 
-    // Handle dates
     if (sortKey.includes("date") || sortKey === "start_date" || sortKey === "end_date") {
       aVal = aVal ? new Date(aVal) : new Date(0);
       bVal = bVal ? new Date(bVal) : new Date(0);
       return sortAsc ? aVal - bVal : bVal - aVal;
     }
-
-    // Handle boolean
     if (typeof aVal === "boolean" || typeof bVal === "boolean") {
       return sortAsc ? (aVal === bVal ? 0 : aVal ? -1 : 1) : (aVal === bVal ? 0 : aVal ? 1 : -1);
     }
 
-    // Default string/number
-    aVal = aVal || "";
-    bVal = bVal || "";
+    aVal = aVal ?? "";
+    bVal = bVal ?? "";
     if (typeof aVal === "string" && typeof bVal === "string") {
       return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     }
@@ -233,17 +229,19 @@ export default function ScenariosPage() {
       setSortAsc(true);
     }
   };
+
   return (
-    <Card className="p-4">
+    <Card className="ds-card p-4">
       <div className="d-flex align-items-center mb-3 justify-content-between">
         <div className="d-flex align-items-center gap-3">
-          <h4 className="mb-0">Scenarios</h4>
+          <h4 className="ds-heading mb-0">Scenarios</h4>
           <Form.Control
             type="text"
             placeholder={t("search")}
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
             style={{ maxWidth: 250 }}
+            className="ds-input"
           />
         </div>
         <div className="d-flex gap-3 align-items-center">
@@ -253,19 +251,20 @@ export default function ScenariosPage() {
             label={t("show mine")}
             checked={showOnlyUser}
             onChange={() => setShowOnlyUser(v => !v)}
+            className="brand-switch"
             style={{ fontWeight: "bold" }}
           />
           {role !== "guest" && (
             <>
-              <Button variant="primary" onClick={() => setShowModal(true)}>
+              <button className="btn btn-brand" onClick={() => setShowModal(true)}>
                 {t("createScenario")}
-              </Button>
-              <Button variant="warning" onClick={() => setShowStartModal(true)}>
+              </button>
+              <button className="btn btn-brand" onClick={() => setShowStartModal(true)}>
                 {t("startScenario")}
-              </Button>
-              <Button variant="info" onClick={() => setShowWorkerPanel(true)}>
-                {t("Worker Status")}
-              </Button>
+              </button>
+              <button className="btn btn-ghost" onClick={() => setShowWorkerPanel(true)}>
+                {t("serverStatus")}
+              </button>
             </>
           )}
         </div>
@@ -278,42 +277,46 @@ export default function ScenariosPage() {
         onSort={handleSort}
         onShowLogs={handleShowLogs}
       />
+
       {/* Create Scenario Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered>
         <Modal.Header closeButton>
-          <Modal.Title>{t("createScenario")}</Modal.Title>
+          <Modal.Title className="ds-title">{t("createScenario")}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
             <Form.Group className="mb-3">
-              <Form.Label>{t("componentName")}</Form.Label>
+              <Form.Label className="ds-title">{t("componentName")}</Form.Label>
               <Form.Control
                 value={scenarioName}
                 onChange={e => setScenarioName(e.target.value)}
                 placeholder={t("enterComponentName")}
                 autoFocus
+                className="ds-input"
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>{t("description")}</Form.Label>
+              <Form.Label className="ds-title">{t("description")}</Form.Label>
               <Form.Control
                 as="textarea"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 placeholder={t("enterDescription")}
                 rows={2}
+                className="ds-input"
               />
             </Form.Group>
 
             {availableComponents.map(ds => (
               <Form.Group key={ds.data_source_id} className="mb-3">
-                <Form.Label>
+                <Form.Label className="ds-title">
                   <strong>{ds.data_source_name}</strong>
                 </Form.Label>
                 <Form.Select
                   value={selectedComponents[ds.data_source_id] || ""}
                   onChange={e => handleComponentSelect(ds.data_source_id, Number(e.target.value))}
                   style={{ maxWidth: 400 }}
+                  className="ds-input form-select"
                 >
                   <option value="">{t("selectComponent")}</option>
                   {ds.components.map(comp => (
@@ -327,21 +330,27 @@ export default function ScenariosPage() {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="success" onClick={handleSave} disabled={saving || !scenarioName}>
-            Save Scenario
-          </Button>
+          <button className="btn btn-ghost" onClick={() => setShowModal(false)}>
+            {t("cancel") || "Cancel"}
+          </button>
+          <button
+            className="btn btn-brand"
+            onClick={handleSave}
+            disabled={saving || !scenarioName}
+          >
+            {t("save") || "Save Scenario"}
+          </button>
         </Modal.Footer>
       </Modal>
+
+      {/* Logs Modal */}
       <Modal show={showLogsModal} onHide={() => setShowLogsModal(false)} size="lg" centered>
         <Modal.Header closeButton>
-          <Modal.Title>{t("Log of scenario:")} {logsScenarioName}</Modal.Title>
+          <Modal.Title className="ds-title">{t("Log of scenario:")} {logsScenarioName}</Modal.Title>
         </Modal.Header>
-        <Modal.Body style={{ maxHeight: "400px", overflowY: "auto" }}>
-          <Table bordered size="sm">
-            <thead>
+        <Modal.Body className="brand-scroll" style={{ maxHeight: "400px", overflowY: "auto" }}>
+          <Table bordered size="sm" className="ds-table">
+            <thead className="ds-thead">
               <tr>
                 <th>{t("time")}</th>
                 <th>{t("message")}</th>
@@ -350,7 +359,7 @@ export default function ScenariosPage() {
             </thead>
             <tbody>
               {logs.map((log, i) => (
-                <tr key={i}>
+                <tr key={i} className="ds-row">
                   <td>{new Date(log.timestamp).toLocaleString()}</td>
                   <td>{log.message}</td>
                   <td>{log.progress}%</td>
@@ -360,19 +369,22 @@ export default function ScenariosPage() {
           </Table>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowLogsModal(false)}>
+          <button className="btn btn-ghost" onClick={() => setShowLogsModal(false)}>
             {t("close")}
-          </Button>
+          </button>
         </Modal.Footer>
       </Modal>
+
+      {/* Worker Status Modal */}
       <Modal show={showWorkerPanel} onHide={() => setShowWorkerPanel(false)} size="lg" centered>
         <Modal.Header closeButton>
-          <Modal.Title>Worker Status Panel</Modal.Title>
+          <Modal.Title className="ds-title">Worker Status Panel</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <WorkerStatusPanel />
         </Modal.Body>
       </Modal>
+
       {/* Start Scenario Modal */}
       <StartScenarioModal
         show={showStartModal}

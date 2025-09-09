@@ -1,7 +1,26 @@
 import { useEffect, useState } from "react";
-import { Card, Table, Spinner, Badge } from "react-bootstrap";
+import { Card, Table, Spinner } from "react-bootstrap";
 import api from "../../utils/axiosInstance";
 import { useTranslation } from "react-i18next";
+
+function BrandBadge({ text }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "0.15rem .5rem",
+        borderRadius: 999,
+        background: "var(--brand-50a)",
+        color: "var(--brand-800)",
+        border: "1px solid var(--brand-outline)",
+        fontWeight: 600,
+        fontSize: "0.8rem",
+      }}
+    >
+      {text}
+    </span>
+  );
+}
 
 export default function WorkerStatusPanel() {
   const { t } = useTranslation();
@@ -25,73 +44,80 @@ export default function WorkerStatusPanel() {
     return () => clearInterval(interval);
   }, []);
 
-  const renderWorkerTable = (workers = []) => (
-    <Table bordered hover size="sm" className="mb-4">
-      <thead className="table-light">
-        <tr>
-          <th>{t("worker")}</th>
-          <th>{t("status")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {workers.length > 0 ? (
-          workers.map((w, idx) => (
-            <tr key={idx}>
-              <td>{w.worker}</td>
-              <td>
-                <Badge bg={w.status === "pong" ? "success" : "danger"}>
-                  {w.status}
-                </Badge>
-              </td>
-            </tr>
-          ))
-        ) : (
-          <tr>
-            <td colSpan="4" className="text-center text-muted">
-              {t("noWorkersFound")}
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </Table>
+  const TableWrapper = ({ title, children }) => (
+    <div className="mb-4">
+      <h6 className="ds-title mb-2">{title}</h6>
+      <div className="ds-table-wrapper brand-scroll">{children}</div>
+    </div>
   );
 
-  const renderTable = (items = [], variant) => (
-    <Table bordered hover size="sm" className="mb-4">
-      <thead className={`table-${variant}`}>
-        <tr>
-          <th>{t("scenarioId")}</th>
-          <th>{t("name")}</th>
-          <th>{t("status")}</th>
-          <th>{t("description")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.length > 0 ? (
-          items.map((s) => (
-            <tr key={s.id || s.task_id}>
-              <td>{s.id || "—"}</td>
-              <td>{s.name}</td>
-              <td>
-                <Badge bg={variant}>{s.status}</Badge>
-              </td>
-              <td>{s.description || "—"}</td>
-            </tr>
-          ))
-        ) : (
+  const renderWorkerTable = (workers = []) => (
+    <TableWrapper title={t("servers")}>
+      <Table bordered hover size="sm" className="ds-table">
+        <thead className="ds-thead">
           <tr>
-            <td colSpan="4" className="text-center text-muted">
-              {t("noTasks")}
-            </td>
+            <th>{t("server")}</th>
+            <th>{t("status")}</th>
           </tr>
-        )}
-      </tbody>
-    </Table>
+        </thead>
+        <tbody>
+          {workers.length > 0 ? (
+            workers.map((w, idx) => (
+              <tr key={idx} className="ds-row">
+                <td>{w.worker}</td>
+                <td>
+                  <BrandBadge text={w.status} />
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="2" className="text-center text-muted">
+                {t("noWorkersFound")}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </Table>
+    </TableWrapper>
+  );
+
+  const renderTable = (items = [], titleKey) => (
+    <TableWrapper title={t(titleKey)}>
+      <Table bordered hover size="sm" className="ds-table">
+        <thead className="ds-thead">
+          <tr>
+            <th>{t("scenarioId")}</th>
+            <th>{t("componentName")}</th>
+            <th>{t("status")}</th>
+            <th>{t("description")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items?.length > 0 ? (
+            items.map((s) => (
+              <tr key={s.id || s.task_id} className="ds-row">
+                <td>{s.id || "—"}</td>
+                <td>{s.name}</td>
+                <td><BrandBadge text={titleKey} /></td>
+                <td>{s.description || "—"}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="4" className="text-center text-muted">
+                {t("noTasks")}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </Table>
+    </TableWrapper>
   );
 
   if (loading) {
     return (
-      <Card className="p-4 text-center">
+      <Card className="ds-card p-4 text-center">
         <Spinner animation="border" /> {t("loading")}
       </Card>
     );
@@ -99,21 +125,22 @@ export default function WorkerStatusPanel() {
 
   if (!statuses) {
     return (
-      <Card className="p-4 text-center text-danger">
+      <Card className="ds-card p-4 text-center" style={{ color: "var(--brand-800)" }}>
         {t("failedLoadWorkers")}
       </Card>
     );
   }
 
   return (
-    <Card className="p-4">
-      <h4 className="mb-3">{t("workerStatus")}</h4>
+    <Card className="ds-card p-4">
+      <h4 className="ds-heading mb-3">{t("serverStatus")}</h4>
+
       {renderWorkerTable(statuses.workers)}
-      {renderTable(statuses.PENDING, "secondary")}
-      {renderTable(statuses.STARTED, "warning")}
-      {renderTable(statuses.SUCCESS, "success")}
-      {renderTable(statuses.FAILURE, "danger")}
-      {renderTable(statuses.QUEUED, "info")}
+      {renderTable(statuses.PENDING, "PENDING")}
+      {renderTable(statuses.STARTED, "STARTED")}
+      {renderTable(statuses.SUCCESS, "SUCCESS")}
+      {renderTable(statuses.FAILURE, "FAILURE")}
+      {renderTable(statuses.QUEUED, "QUEUED")}
     </Card>
   );
 }

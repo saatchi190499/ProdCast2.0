@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "../pages/Login";
 import Dashboard from "../pages/Dashboard";
 import Settings from "../pages/Settings";
-import ModelsPage from "../pages/models/ModelsPage";
 import EventRecordsPage from "../pages/events/EventRecordsPage";
 import DataSourcePage from "../pages/DataSourcePage";
 import Scenarios from "../pages/scenario/Scenarios";
@@ -11,58 +10,37 @@ import { isAuthenticated } from "../utils/auth";
 import MainLayout from "../layouts/MainLayout";
 
 function PrivateRoute({ children }) {
-    return isAuthenticated() ? children : <Navigate to="/login" />;
+  return isAuthenticated() ? children : <Navigate to="/login" replace />;
 }
 
 export default function AppRouter() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route
-                    path="/"
-                    element={
-                        <PrivateRoute>
-                            <MainLayout />
-                        </PrivateRoute>
-                    }
-                >
-                    <Route index element={<Dashboard />} />
-                    <Route
-                        path="/inputs/:sourceName"
-                        element={
-                            <PrivateRoute>
-                                    <DataSourcePage />
-                            </PrivateRoute>
-                        }
-                    />
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Public route */}
+        <Route path="/login" element={<Login />} />
 
-                    <Route path="/components/:id/events" element={<EventRecordsPage />} />
+        {/* Protected layout with Outlet */}
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <MainLayout />
+            </PrivateRoute>
+          }
+        >
+          {/* Child routes MUST be relative (no leading slash) to render inside <Outlet /> */}
+          <Route index element={<Dashboard />} />
+          <Route path="inputs/:sourceName" element={<DataSourcePage />} />
+          <Route path="components/:id/events" element={<EventRecordsPage />} />
+          <Route path="scenarios" element={<Scenarios />} />
+          <Route path="results" element={<Results />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
 
-                    <Route path="/scenarios"
-                        element={
-                            <PrivateRoute>
-                                <Scenarios />
-                            </PrivateRoute>
-                        }
-                    />
-
-                    <Route path="/results"
-                        element={
-                            <PrivateRoute>
-                                <Results />
-                            </PrivateRoute>
-                        }
-                    />
-
-                    <Route path="settings"
-                        element={
-                            <Settings />
-                        }
-                    />
-
-                </Route>
-            </Routes>
-        </BrowserRouter>
-    );
+        {/* Fallback: anything else goes to home (or login if you prefer) */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import AdminPanel from "./settings/AdminPanel";
 import LanguageSwitcher from "../components/LanguageSwitcher";
-import ThemeSwitcher from "../components/ThemeSwitcher";
+import ThemeSwitcher from "../components/ThemeSelect";
 import { useTranslation } from "react-i18next";
 import { Tabs, Tab, Container, Row, Col } from "react-bootstrap";
 

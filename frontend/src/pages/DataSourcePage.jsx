@@ -5,6 +5,7 @@ import api from "../utils/axiosInstance";
 import { Spinner, Alert, Card, Table, Modal, Button, Form } from "react-bootstrap";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
+import "./DataSourcePage.css";
 
 export default function DataSourcePage() {
   const { sourceName } = useParams();
@@ -119,17 +120,18 @@ export default function DataSourcePage() {
   if (error) return <Alert variant="danger">{error}</Alert>;
 
   return (
-    <Card>
+    <Card className="ds-card">
       <Card.Body>
         <Modal show={showModal} onHide={() => setShowModal(false)}>
           <Modal.Header closeButton>
-            <Modal.Title>{t("addComponent")}</Modal.Title>
+            <Modal.Title className="ds-title">{t("addComponent")}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <Form>
               <Form.Group className="mb-3">
                 <Form.Label>{t("componentName")}</Form.Label>
                 <Form.Control
+                  className="ds-input"
                   type="text"
                   value={newComponent.name}
                   onChange={(e) => setNewComponent({ ...newComponent, name: e.target.value })}
@@ -138,6 +140,7 @@ export default function DataSourcePage() {
               <Form.Group className="mb-3">
                 <Form.Label>{t("componentDescription")}</Form.Label>
                 <Form.Control
+                  className="ds-input"
                   as="textarea"
                   rows={3}
                   value={newComponent.description}
@@ -148,6 +151,7 @@ export default function DataSourcePage() {
                 <Form.Group className="mb-3">
                   <Form.Label>{t("componentFile")}</Form.Label>
                   <Form.Control
+                    className="ds-input"
                     type="file"
                     onChange={(e) => setNewComponent({ ...newComponent, file: e.target.files[0] })}
                   />
@@ -156,10 +160,10 @@ export default function DataSourcePage() {
             </Form>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>
+            <Button className="btn-ghost" onClick={() => setShowModal(false)} variant="none">
               {t("cancel")}
             </Button>
-            <Button variant="primary" onClick={handleCreate}>
+            <Button className="btn-brand" onClick={handleCreate} variant="none">
               {t("create")}
             </Button>
           </Modal.Footer>
@@ -167,7 +171,7 @@ export default function DataSourcePage() {
 
         <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
           <div className="d-flex align-items-center gap-3">
-            <Card.Title className="mb-0">
+            <Card.Title className="mb-0 ds-heading">
               {sourceName}
             </Card.Title>
             <Form.Control
@@ -176,6 +180,7 @@ export default function DataSourcePage() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               style={{ maxWidth: 250 }}
+              className="ds-input"
             />
           </div>
           <div className="d-flex align-items-center gap-3">
@@ -185,11 +190,11 @@ export default function DataSourcePage() {
               label={t("show mine")}
               checked={showOnlyUser}
               onChange={() => setShowOnlyUser(v => !v)}
-              style={{ fontWeight: "bold" }}
+              className="brand-switch fw-semibold"
             />
             {role !== "guest" && (
-              <Button onClick={() => setShowModal(true)} variant="success">
-                ➕ {t("addComponent")}
+              <Button onClick={() => setShowModal(true)} variant="none" className="btn-brand" >
+                {t("addComponent")}
               </Button>
             )}
           </div>
@@ -198,27 +203,27 @@ export default function DataSourcePage() {
           <p>{t("noComponents")}</p>
         ) : (
           <div style={{ maxHeight: "calc(100vh - 250px)", overflowY: "auto" }}>
-            <Table bordered size="sm" className="rounded table-hover">
-              <thead className="table-secondary sticky-top">
+            <Table bordered size="sm" className="rounded table-hover ds-table">
+              <thead className="sticky-top ds-thead">
                 <tr>
-                  <th onClick={() => handleSort("name")} style={{ cursor: "pointer" }}>
+                  <th onClick={() => handleSort("name")} className={`sortable ${sortKey === "name" ? "sorted" : ""}`}>
                     {t("componentName")}
                     {sortKey === "name" && (sortAsc ? " ▲" : " ▼")}
                   </th>
-                  <th onClick={() => handleSort("created_date")} style={{ cursor: "pointer" }}>
+                  <th onClick={() => handleSort("created_date")} className={`sortable ${sortKey === "created_date" ? "sorted" : ""}`}>
                     {t("created")}
                     {sortKey === "created_date" && (sortAsc ? " ▲" : " ▼")}
                   </th>
-                  <th onClick={() => handleSort("created_by")} style={{ cursor: "pointer" }}>
+                  <th onClick={() => handleSort("created_by")} className={`sortable ${sortKey === "created_by" ? "sorted" : ""}`}>
                     {t("author")}
                     {sortKey === "created_by" && (sortAsc ? " ▲" : " ▼")}
                   </th>
-                  <th onClick={() => handleSort("last_updated")} style={{ cursor: "pointer" }}>
+                  <th onClick={() => handleSort("last_updated")} className={`sortable ${sortKey === "last_updated" ? "sorted" : ""}`}>
                     {t("updated")}
                     {sortKey === "last_updated" && (sortAsc ? " ▲" : " ▼")}
                   </th>
                   <th>{t("file")}</th>
-                  <th onClick={() => handleSort("description")} style={{ cursor: "pointer" }}>
+                  <th onClick={() => handleSort("description")} className={`sortable ${sortKey === "description" ? "sorted" : ""}`}>
                     {t("componentDescription")}
                     {sortKey === "description" && (sortAsc ? " ▲" : " ▼")}
                   </th>
@@ -229,6 +234,7 @@ export default function DataSourcePage() {
               <tbody>
                 {filteredComponents.map(c => (
                   <tr key={c.id}
+                    className="ds-row"
                     onDoubleClick={() => {
                       if (
                         sourceName === "Events" &&
@@ -246,10 +252,11 @@ export default function DataSourcePage() {
                     <td>
                       {c.file ? (
                         <a
-                          href={`${api}${c.file}`}
+                          href={`${api?.defaults?.baseURL ?? ""}${c.file}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           download
+                          className="brand-link"
                         >
                           📥 {t("download")}
                         </a>
@@ -261,9 +268,10 @@ export default function DataSourcePage() {
                     <td>
                       {(user?.username === c.created_by || role === "admin") && (
                         <Button
-                          variant="danger"
+                          variant="outline-danger"
                           size="sm"
                           onClick={() => handleDelete(c.id, c.created_by)}
+                          className="btn-danger-outline"
                         >
                           {t("delete")}
                         </Button>
