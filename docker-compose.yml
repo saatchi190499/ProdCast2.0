@@ -16,9 +16,7 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      VITE_ALLOWED_HOSTS: localhost,10.0.0.45
-      VITE_BACKEND_URL: http://10.0.0.45:8000/api
-      CORS_ALLOWED_ORIGINS: http://localhost:8000,http://10.0.0.45:8000
+      CORS_ALLOWED_ORIGINS: http://localhost:8000,http://10.0.0.45:8000,https://azatdb.qoyma.duckdns.org
       DJANGO_SUPERUSER_USERNAME: admin
       DJANGO_SUPERUSER_PASSWORD: 111
       DJANGO_SUPERUSER_EMAIL: admin@example.com
@@ -42,6 +40,8 @@ services:
     ports:
       - "80:80"
     environment:
+      VITE_ALLOWED_HOSTS: localhost,10.0.0.45,azatdb.qoyma.duckdns.org
+      VITE_BACKEND_URL: https://azatdb.qoyma.duckdns.org/api
       NODE_ENV: development
     depends_on:
       - backend
