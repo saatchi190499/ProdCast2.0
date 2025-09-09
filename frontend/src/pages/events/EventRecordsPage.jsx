@@ -36,6 +36,11 @@ export default function EventRecordsPage() {
   };
 
 
+  const getCategoryForProperty = (objectTypeName, propertyName) => {
+    const prop = propertyOptions[objectTypeName]?.find(p => p.name === propertyName);
+    return prop?.category || "";
+  };
+
   const getConversionForProperty = (propertyName) => {
     if (!selectedUnitSystemId) return { scale: 1, offset: 0 };
     const system = unitSystemMappings.find(s => s.unit_system_id === selectedUnitSystemId);
@@ -57,14 +62,17 @@ export default function EventRecordsPage() {
 
   const convertIdsToNames = (data, typeList, instanceMap, propertyMap) => {
     return data.map((r) => {
-      const prop = Object.values(propertyMap).flat().find((x) => x.id === r.object_type_property);
+      const typeName = typeList.find((t) => t.id === r.object_type)?.name || "";
+      const instanceName = Object.values(instanceMap).flat().find((x) => x.id === r.object_instance)?.name || "";
+      const propObj = Object.values(propertyMap).flat().find((x) => x.id === r.object_type_property);
 
       return {
         ...r,
-        object_type: typeList.find((t) => t.id === r.object_type)?.name || "",
-        object_instance: Object.values(instanceMap).flat().find((x) => x.id === r.object_instance)?.name || "",
-        object_type_property: prop?.name || "",
-        unit: prop?.unit || "",// Access the unit name
+        object_type: typeName,
+        object_instance: instanceName,
+        object_type_property: propObj?.name || "",
+        unit: propObj?.unit || "",
+        sub_data_source: propObj?.category || "",   // <-- auto-filled here
       };
     });
   };
@@ -120,7 +128,7 @@ export default function EventRecordsPage() {
         const types = metaRes.data.types;
         const instances = metaRes.data.instances;
         const properties = metaRes.data.properties;
-
+        console.log("Metadata:", metaRes.data);
         setTypeOptions(types);
         setInstanceOptions(instances);
         setPropertyOptions(properties);
@@ -151,10 +159,26 @@ export default function EventRecordsPage() {
     const updated = records.map((r) => {
       const validInstances = instanceOptions[r.object_type] || [];
       const validProps = propertyOptions[r.object_type] || [];
-      if (!validInstances.find(x => x.name === r.object_instance)) r.object_instance = "";
-      if (!validProps.find(x => x.name === r.object_type_property)) r.object_type_property = "";
-      return r;
+
+      let object_instance = r.object_instance;
+      let object_type_property = r.object_type_property;
+
+      if (!validInstances.find(x => x.name === object_instance)) object_instance = "";
+      if (!validProps.find(x => x.name === object_type_property)) {
+        object_type_property = "";
+      }
+
+      const unit = object_type_property
+        ? (validProps.find(p => p.name === object_type_property)?.unit || "")
+        : "";
+
+      const sub_data_source = object_type_property
+        ? (validProps.find(p => p.name === object_type_property)?.category || "")
+        : "";
+
+      return { ...r, object_instance, object_type_property, unit, sub_data_source };
     });
+
     setRecords(updated);
   }, [instanceOptions, propertyOptions]);
 
@@ -178,15 +202,23 @@ export default function EventRecordsPage() {
       complete: (results) => {
         const parsed = results.data.map(row => {
           const cleanRow = { ...emptyRow, ...row };
+
           if (cleanRow.date_time && cleanRow.date_time.includes("/")) {
             const [d, m, y] = cleanRow.date_time.split("/");
-            if (d && m && y) {
-              cleanRow.date_time = `${y.padStart(4, "20")}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-            } else {
-              cleanRow.date_time = "";
-            }
+            cleanRow.date_time = (d && m && y)
+              ? `${y.padStart(4, "20")}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
+              : "";
           }
-          return cleanRow;
+
+          // Recompute unit & category from the selected property
+          const unit = getUnitForProperty(cleanRow.object_type_property);
+          const category = getCategoryForProperty(cleanRow.object_type, cleanRow.object_type_property);
+
+          return {
+            ...cleanRow,
+            unit,
+            sub_data_source: category, // <-- override whatever came from CSV
+          };
         });
         // Replace table data instead of appending
         setRecords(parsed);
@@ -237,14 +269,14 @@ export default function EventRecordsPage() {
     if (field === "object_type") {
       updated[realIndex]["object_instance"] = "";
       updated[realIndex]["object_type_property"] = "";
-      updated[realIndex]["unit"] = ""; // Clear the unit as well
+      updated[realIndex]["unit"] = "";
+      updated[realIndex]["sub_data_source"] = ""; // <-- clear
     } else if (field === "object_type_property") {
-      // Find the selected property object from the options
-      const selectedProp = propertyOptions[updated[realIndex].object_type]?.find(
-        (p) => p.name === value
-      );
-      // Update the unit with the unit from the selected property
+      const otName = updated[realIndex].object_type;
+      const selectedProp = propertyOptions[otName]?.find((p) => p.name === value);
+
       updated[realIndex]["unit"] = selectedProp?.unit || "";
+      updated[realIndex]["sub_data_source"] = selectedProp?.category || ""; // <-- auto category
     }
 
     setRecords(updated);
@@ -308,7 +340,7 @@ export default function EventRecordsPage() {
         object_type: typeId,
         object_instance: instanceId,
         object_type_property: propId,
-        sub_data_source: r.sub_data_source?.trim() === "" ? null : r.sub_data_source,
+        // sub_data_source: r.sub_data_source?.trim() === "" ? null : r.sub_data_source,
         description: r.description?.trim() === "" ? null : r.description,
       };
     });
@@ -425,7 +457,7 @@ export default function EventRecordsPage() {
                 <tr key={i}>
                   <td className={error.date_time ? 'cell-error' : ''}>
                     <Form.Control
-                    className="ds-input"
+                      className="ds-input"
                       type="date"
                       value={dateOnly}
                       onChange={(e) => handleChange(i, "date_time", e.target.value)}
@@ -433,7 +465,7 @@ export default function EventRecordsPage() {
                   </td>
                   <td className={error.object_type ? 'cell-error' : ''}>
                     <Form.Select
-                    className="ds-input"
+                      className="ds-input"
                       value={r.object_type || ""}
                       onChange={(e) => handleChange(i, "object_type", e.target.value)}>
                       <option value="">Select Type</option>
@@ -444,7 +476,7 @@ export default function EventRecordsPage() {
                   </td>
                   <td className={error.object_instance ? 'cell-error' : ''}>
                     <Form.Select
-                    className="ds-input"
+                      className="ds-input"
                       value={r.object_instance || ""}
                       onChange={(e) => handleChange(i, "object_instance", e.target.value)}>
                       <option value="">Select Instance</option>
@@ -455,7 +487,7 @@ export default function EventRecordsPage() {
                   </td>
                   <td style={{ backgroundColor: error.object_type_property ? '#ffe6e6' : 'transparent' }}>
                     <Form.Select
-                    className="ds-input"
+                      className="ds-input"
                       value={r.object_type_property || ""}
                       onChange={(e) => handleChange(i, "object_type_property", e.target.value)}>
                       <option value="">Select Property</option>
@@ -467,7 +499,7 @@ export default function EventRecordsPage() {
                   <td className={error.object_type_property ? 'cell-error' : ''}>
                     <div className="d-flex align-items-center">
                       <Form.Control
-                      className="ds-input"
+                        className="ds-input"
                         type="number"
                         value={(() => {
                           // Show the input as-is if not a valid number
@@ -503,10 +535,11 @@ export default function EventRecordsPage() {
                   </td>
                   <td>
                     <Form.Control
-                    className="ds-input"
+                      className="ds-input"
                       type="text"
                       value={r.sub_data_source || ""}
-                      onChange={(e) => handleChange(i, "sub_data_source", e.target.value)}
+                      readOnly
+                      disabled
                     />
                   </td>
                   <td>

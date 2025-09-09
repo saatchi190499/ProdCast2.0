@@ -21,13 +21,15 @@ class ObjectMetadataView(APIView):
             props = ObjectTypeProperty.objects.filter(object_type_id=t["id"]).values(
                 "object_type_property_id",
                 "object_type_property_name",
-                "unit__alias_text"  # Use double underscore to get the unit name
+                "unit__alias_text",  # Use double underscore to get the unit name
+                "object_type_property_category"
             )
             properties_by_type[t["name"]] = [
                 {
                     "id": x["object_type_property_id"],
                     "name": x["object_type_property_name"],
-                    "unit": x["unit__alias_text"]  # Extract the unit name
+                    "unit": x["unit__alias_text"],  # Extract the unit name
+                    "category": x["object_type_property_category"]
                 } 
                 for x in props
             ]
