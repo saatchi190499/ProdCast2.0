@@ -30,3 +30,4 @@ media/
 # This is often not needed if you ignore all __pycache__/
 # but can be useful if a generic rule is overridden.
 mainapp/__pycache__/
+migrations/

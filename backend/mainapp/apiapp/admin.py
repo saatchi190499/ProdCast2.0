@@ -196,11 +196,11 @@ class ObjectTypePropertyAdmin(admin.ModelAdmin):
 class MainClassAdmin(admin.ModelAdmin):
     list_display = (
         'data_set_id', 'data_source_name', 'data_source_id', 'object_type',
-        'object_instance', 'object_type_property', 'value', 'date_time', 'sub_data_source'
+        'object_instance', 'object_type_property', 'value', 'date_time',
     )
     list_filter = (
         'data_source_name', 'object_type', 'object_instance',
-        'object_type_property', 'sub_data_source', 'date_time'
+        'object_type_property',  'date_time'
     )
     search_fields = (
         'data_set_id', 'data_source_id', 'description',
@@ -222,6 +222,6 @@ class MainClassAdmin(admin.ModelAdmin):
             'fields': ('value', 'date_time')
         }),
         ('Additional Information', {
-            'fields': ('sub_data_source', 'description')
+            'fields': ('description',)
         }),
     )

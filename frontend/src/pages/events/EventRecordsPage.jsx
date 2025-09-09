@@ -375,7 +375,7 @@ export default function EventRecordsPage() {
           <option value="description">{t("description")}</option>
         </Form.Select>
         <Form.Control className="ds-input" type="text" placeholder={t("value")} value={bulkEdit.value} onChange={(e) => setBulkEdit({ ...bulkEdit, value: e.target.value })} style={{ maxWidth: 150 }} />
-        <Button variant="none" className="btn-brand" onClick={handleBulkEdit}>⚙ {t("apply")}</Button>
+        <Button variant="none" className="btn-brand" onClick={handleBulkEdit}>{t("apply")}</Button>
 
         <Form.Select
           className="ds-input"
@@ -393,7 +393,7 @@ export default function EventRecordsPage() {
 
       </div>
       <div className="brand-scroll" style={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto" }}>
-        <Table bordered size="sm" className="rounded table-hover ds-table">
+        <Table bordered size="sm" className="rounded ds-table">
           <thead className="ds-thead sticky-top">
             <tr>
               {[

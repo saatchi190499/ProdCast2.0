@@ -344,18 +344,26 @@ class MainClass(models.Model):
     object_type_property = models.ForeignKey(ObjectTypeProperty, on_delete=models.CASCADE, verbose_name="Object Type Property")
 
     value = models.DecimalField(max_digits=38, decimal_places=28, db_column='value', null=True)
-    date_time = models.DateTimeField("Date", db_column='date', null=True) # Changed to DateTimeField
-    sub_data_source = models.CharField("Category", max_length=50, null=True)
+    date_time = models.DateTimeField("Date", db_column='date', null=True)
+    # ⬇️ УДАЛЕНО: sub_data_source = models.CharField(...)
+
     description = models.TextField("Description", null=True, blank=True)
+
+    @property
+    def sub_data_source(self) -> str | None:
+        """Вычисляется из связанного ObjectTypeProperty.object_type_property_category"""
+        otp = self.object_type_property
+        return otp.object_type_property_category if otp else None
 
     def to_dict(self):
         return {
             "data_source_id": self.data_source_id,
             "object_instance_id": self.object_instance_id,
-            "date_time": self.date_time.isoformat() if self.date_time else None, # Format datetime for dict
+            "date_time": self.date_time.isoformat() if self.date_time else None,
             "object_type_id": self.object_type_id,
             "object_type_property_id": self.object_type_property_id,
-            "data_source_name": str(self.data_source_name)
+            "data_source_name": str(self.data_source_name),
+            "sub_data_source": self.sub_data_source,  # ⬅️ Добавили в вывод
         }
 
     class Meta:
