@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+
 from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,12 +27,7 @@ SECRET_KEY = 'django-insecure-bk83=xbv3$=y8^$@s8ae4+lw4if3*_@&x6ah)qkod+$v9@g&^$
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-CORS_ALLOWED_ORIGINS = [
-    "http://tstweb08",
-    "http://10.117.8.121", 
-    "http://localhost", # если обращение с IP
-    "http://127.0.0.1"
-]
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
 
 # Application definition
 
@@ -51,6 +48,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',  
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -88,7 +86,7 @@ DATABASES = {
         'NAME': 'prodcast2.0',       # имя вашей базы
         'USER': 'postgres',     # пользователь
         'PASSWORD': '1',
-        'HOST': 'localhost',    # или IP/домен сервера
+        'HOST': 'db',    # или IP/домен сервера
         'PORT': '5432',         # стандартный порт PostgreSQL
     }
 }
@@ -159,7 +157,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
