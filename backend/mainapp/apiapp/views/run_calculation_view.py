@@ -13,10 +13,6 @@ import json
 import redis
 from django.conf import settings
 
-import json
-import redis
-from django.http import JsonResponse
-
 class RunCalculationView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -40,8 +36,6 @@ class RunCalculationView(APIView):
         scenario.save()
 
         return Response({"task_id": task.id, "status": "QUEUED"})
-
-
 
 
 # Подключение к Redis (замени host/port/db при необходимости)
