@@ -131,7 +131,8 @@ class ObjectTypePropertySerializer(serializers.ModelSerializer):
 class DataSourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = DataSource
-        fields = ['id', 'data_source_name']
+        fields = ['id', 'data_source_name', 'data_source_type']
+
 
 
 # ---------- MainClass ----------

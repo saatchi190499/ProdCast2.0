@@ -3,9 +3,9 @@ import Login from "../pages/Login";
 import Dashboard from "../pages/Dashboard";
 import Settings from "../pages/Settings";
 import EventRecordsPage from "../pages/events/EventRecordsPage";
+import WorkflowRecordsPage from "../pages/processes/WorkflowRecordsPage";
 import DataSourcePage from "../pages/DataSourcePage";
 import Scenarios from "../pages/scenario/Scenarios";
-import Results from "../pages/results/Results";
 import { isAuthenticated } from "../utils/auth";
 import MainLayout from "../layouts/MainLayout";
 
@@ -31,10 +31,10 @@ export default function AppRouter() {
         >
           {/* Child routes MUST be relative (no leading slash) to render inside <Outlet /> */}
           <Route index element={<Dashboard />} />
-          <Route path="inputs/:sourceName" element={<DataSourcePage />} />
-          <Route path="components/:id/events" element={<EventRecordsPage />} />
+          <Route path=":sourceType/:sourceName" element={<DataSourcePage />} />
+          <Route path="components/events/:id" element={<EventRecordsPage />} />
+          <Route path="components/workflows/:id" element={<WorkflowRecordsPage />} />
           <Route path="scenarios" element={<Scenarios />} />
-          <Route path="results" element={<Results />} />
           <Route path="settings" element={<Settings />} />
         </Route>
 

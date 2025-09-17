@@ -3,7 +3,6 @@ import { useAuth } from "../context/AuthContext";
 import { Button, OverlayTrigger, Tooltip } from "react-bootstrap";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ModeToggle from "../components/ModeToggle";
-import ThemeSelect from "../components/ThemeSelect";
 import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { FaThumbtack } from "react-icons/fa";
@@ -22,6 +21,7 @@ import {
   FiChevronRight,
   FiChevronDown,
 } from "react-icons/fi";
+import { LuWorkflow } from "react-icons/lu";
 import api from "../utils/axiosInstance";
 import "./SidebarLayout.css";
 
@@ -31,28 +31,31 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ---------------- state & refs ----------------
-  const [submenuOpen, setSubmenuOpen] = useState(false); // Inputs dropdown open
+  // ---------------- state ----------------
   const [dataSources, setDataSources] = useState([]);
+  const [components, setComponents] = useState({});
   const [isPinned, setIsPinned] = useState(
     () => JSON.parse(localStorage.getItem("sidebarPinned") || "false")
   );
-
-  const [collapsed, setCollapsed] = useState(() =>
-    JSON.parse(localStorage.getItem("sidebarCollapsed") || "true")
+  const [collapsed, setCollapsed] = useState(
+    () => JSON.parse(localStorage.getItem("sidebarCollapsed") || "true")
   );
+
+  // Track open menus
+  const [openMenus, setOpenMenus] = useState({
+    INPUT: false,
+    OUTPUT: false,
+    PROCESS: false,
+  });
 
   const hoverTimer = useRef(null);
   const leaveTimer = useRef(null);
 
-  // ---------------- derived values ----------------
-  const isInputsRoute = location.pathname.toLowerCase().startsWith("/inputs");
+  // ---------------- derived ----------------
   const isExpanded = isPinned ? true : !collapsed;
-  // Dock the sidebar on ALL pages whenever expanded (or pinned)
   const shouldDock = isPinned || isExpanded;
 
   // ---------------- effects ----------------
-
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", JSON.stringify(collapsed));
   }, [collapsed]);
@@ -68,21 +71,17 @@ export default function MainLayout() {
       .catch((err) => console.error(t("dataSourcesLoadError"), err));
   }, [t]);
 
-  // Keep Inputs dropdown open when we are on /inputs/*
+  // auto-open submenu when navigating
   useEffect(() => {
-    setSubmenuOpen(isInputsRoute);
-  }, [isInputsRoute]);
+    const path = location.pathname.toLowerCase();
+    setOpenMenus({
+      INPUT: path.startsWith("/input"),
+      OUTPUT: path.startsWith("/output"),
+      PROCESS: path.startsWith("/process"),
+    });
+  }, [location]);
 
-  // ESC unpins
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape" && isPinned) setIsPinned(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isPinned]);
-
-  // Clear timers on unmount
+  // cleanup
   useEffect(() => {
     return () => {
       clearTimeout(hoverTimer.current);
@@ -107,19 +106,31 @@ export default function MainLayout() {
     clearTimeout(hoverTimer.current);
     leaveTimer.current = setTimeout(() => {
       setCollapsed(true);
-      setSubmenuOpen(false);
+      setOpenMenus({ INPUT: false, OUTPUT: false, PROCESS: false });
     }, 120);
   };
 
-  const navItems = useMemo(
-    () => [
-      { to: "/", label: t("home"), icon: <FiHome /> },
-      { to: "/scenarios", label: t("scenarios"), icon: <FiLayers /> },
-      { to: "/results", label: t("results"), icon: <FiBarChart2 /> },
-      { to: "/settings", label: t("settings"), icon: <FiSettings /> },
-    ],
-    [t]
-  );
+  const toggleMenu = (type) => {
+    setOpenMenus((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  };
+
+  const handleLoadComponents = async (ds) => {
+    if (components[ds.data_source_name]) return; // already loaded
+    try {
+      const res = await api.get(
+        `data-sources/${ds.data_source_name}/components/`
+      );
+      setComponents((prev) => ({
+        ...prev,
+        [ds.data_source_name]: res.data,
+      }));
+    } catch (err) {
+      console.error("Failed to load components", err);
+    }
+  };
 
   // ---------------- render ----------------
   return (
@@ -144,7 +155,7 @@ export default function MainLayout() {
             {isExpanded && <span className="brand-text">ProdApp</span>}
           </div>
 
-          {/* Pin button visible only when expanded */}
+          {/* Pin button */}
           {isExpanded && (
             <button
               type="button"
@@ -152,13 +163,10 @@ export default function MainLayout() {
               onClick={() => {
                 setIsPinned((v) => {
                   const next = !v;
-                  if (next) setCollapsed(false); // keep open when pinning
+                  if (next) setCollapsed(false);
                   return next;
                 });
               }}
-              aria-pressed={isPinned}
-              aria-label={isPinned ? t("unpin") : t("pin")}
-              title={isPinned ? t("unpin") : t("pin")}
             >
               <FaThumbtack
                 style={{
@@ -179,73 +187,133 @@ export default function MainLayout() {
             collapsed={collapsed}
           />
 
-          {/* Inputs clickable row */}
-          <div
-            className={`sidebar-link ${isInputsRoute ? "active" : ""}`}
-            role="button"
-            tabIndex={0}
-            aria-expanded={submenuOpen}
-            aria-controls="inputs-dd"
-            onClick={() => {
-              if (collapsed) setCollapsed(false); // expand if collapsed
-              setSubmenuOpen((v) => !v);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                if (collapsed) setCollapsed(false);
-                setSubmenuOpen((v) => !v);
-              }
-            }}
-          >
-            <div className="link-inner">
-              <span className="icon">
-                <FiDatabase />
-              </span>
-              {!collapsed && (
-                <>
-                  <span className="label">{t("inputs")}</span>
-                  <span className="ms-auto caret">
-                    {submenuOpen ? <FiChevronDown /> : <FiChevronRight />}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
+          {/* Groups in custom order */}
+          {["INPUT", "PROCESS"].map((type) => {
+            const groupSources = dataSources.filter(
+              (ds) => ds.data_source_type === type
+            );
+            if (groupSources.length === 0) return null;
 
-          {/* Inputs dropdown (expanded + open) */}
-          {!collapsed && submenuOpen && (
-            <div id="inputs-dd" className="inputs-dd">
-              {dataSources.map((ds) => {
-                const to = `/inputs/${ds.data_source_name}`;
-                const active =
-                  location.pathname.toLowerCase() === to.toLowerCase();
-                return (
-                  <NavLink
-                    key={ds.id ?? ds.data_source_name}
-                    to={to}
-                    className={({ isActive }) =>
-                      `inputs-dd-item ${isActive || active ? "active" : ""}`
-                    }
-                    onClick={() => setSubmenuOpen(true)} // keep open under /inputs
-                  >
-                    {ds.data_source_name}
-                  </NavLink>
-                );
-              })}
-            </div>
-          )}
+            const isOpen = openMenus[type];
+            const label = type === "INPUT" ? t("inputs") : t("processes");
+            const icon = type === "INPUT" ? <FiDatabase /> : <LuWorkflow />;
 
-          {/* Remaining nav items */}
-          {navItems.slice(1).map((item) => (
-            <SidebarLink
-              key={item.to}
-              to={item.to}
-              icon={item.icon}
-              label={item.label}
-              collapsed={collapsed}
-            />
-          ))}
+            return (
+              <div key={type}>
+                {/* Group header */}
+                <div
+                  className="sidebar-link"
+                  role="button"
+                  onClick={() => toggleMenu(type)}
+                >
+                  <div className="link-inner">
+                    <span className="icon">{icon}</span>
+                    {!collapsed && (
+                      <>
+                        <span className="label">{label}</span>
+                        <span className="ms-auto caret">
+                          {isOpen ? <FiChevronDown /> : <FiChevronRight />}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Dropdown items */}
+                {!collapsed && isOpen && (
+                  <div className="inputs-dd">
+                    {groupSources.map((ds) => (
+                      <div key={ds.id}>
+                        <NavLink
+                          to={`/${type.toLowerCase()}/${ds.data_source_name}`}
+                          className={({ isActive }) =>
+                            `inputs-dd-item ${isActive ? "active" : ""}`
+                          }
+                          onClick={() => handleLoadComponents(ds)}
+                        >
+                          {ds.data_source_name}
+                        </NavLink>
+
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Scenarios */}
+          <SidebarLink
+            to="/scenarios"
+            icon={<FiLayers />}
+            label={t("scenarios")}
+            collapsed={collapsed}
+          />
+
+          {/* Results (OUTPUT group) */}
+          {["OUTPUT"].map((type) => {
+            const groupSources = dataSources.filter(
+              (ds) => ds.data_source_type === type
+            );
+            if (groupSources.length === 0) return null;
+
+            const isOpen = openMenus[type];
+            const label = t("results");
+            const icon = <FiBarChart2 />;
+
+            return (
+              <div key={type}>
+                <div
+                  className="sidebar-link"
+                  role="button"
+                  onClick={() => toggleMenu(type)}
+                >
+                  <div className="link-inner">
+                    <span className="icon">{icon}</span>
+                    {!collapsed && (
+                      <>
+                        <span className="label">{label}</span>
+                        <span className="ms-auto caret">
+                          {isOpen ? <FiChevronDown /> : <FiChevronRight />}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {!collapsed && isOpen && (
+                  <div className="inputs-dd">
+                    {groupSources.map((ds) => (
+                      <div key={ds.id}>
+                        <NavLink
+                          to={`/output/${ds.data_source_name}`}
+                          className={({ isActive }) =>
+                            `inputs-dd-item ${isActive ? "active" : ""}`
+                          }
+                          onClick={() => handleLoadComponents(ds)}
+                        >
+                          {ds.data_source_name}
+                        </NavLink>
+
+                        {components[ds.data_source_name] &&
+                          components[ds.data_source_name].map((comp) => (
+                            <NavLink
+                              key={comp.id}
+                              to={`/output/${ds.data_source_name}/${comp.name}`}
+                              className="inputs-dd-subitem"
+                            >
+                              └ {comp.name}
+                            </NavLink>
+                          ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+
         </nav>
 
         {/* Footer */}
@@ -254,6 +322,7 @@ export default function MainLayout() {
             isExpanded={isExpanded}
             onLogout={handleLogout}
             userName={user?.first_name || user?.username}
+            t={t}   // 👈 pass translation function
           />
         </div>
       </aside>
@@ -280,39 +349,27 @@ function SidebarLink({ to, icon, label, collapsed }) {
   if (collapsed) {
     return (
       <OverlayTrigger placement="right" overlay={<Tooltip>{label}</Tooltip>}>
-        <NavLink
-          to={to}
-          className={({ isActive }) =>
-            `sidebar-link ${isActive ? "active" : ""}`
-          }
-        >
+        <NavLink to={to} className="sidebar-link">
           {linkEl}
         </NavLink>
       </OverlayTrigger>
     );
   }
   return (
-    <NavLink
-      to={to}
-      className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-    >
+    <NavLink to={to} className="sidebar-link">
       {linkEl}
     </NavLink>
   );
 }
 
-/* ---------- FooterActions ---------- */
-
-function FooterActions({ isExpanded, onLogout, userName }) {
+function FooterActions({ isExpanded, onLogout, userName, t }) {
   const themeBtnRef = useRef(null);
   const langBtnRef = useRef(null);
-
   const { mode } = useTheme();
 
   if (isExpanded) {
     return (
       <div className="footer-actions">
-        {/* User row */}
         <div className="fa-row-btn is-info">
           <span className="fa-left">
             <span className="fa-ico">
@@ -322,10 +379,14 @@ function FooterActions({ isExpanded, onLogout, userName }) {
           </span>
         </div>
 
-        {/* Mode row */}
-        <div className="fa-row-btn is-control" onClick={() => themeBtnRef.current?.click()}>
+        <div
+          className="fa-row-btn is-control"
+          onClick={() => themeBtnRef.current?.click()}
+        >
           <span className="fa-left">
-            <span className="fa-ico">{mode === "light" ? <FiSun /> : <FiMoon />}</span>
+            <span className="fa-ico">
+              {mode === "light" ? <FiSun /> : <FiMoon />}
+            </span>
             <span className="fa-label">Mode</span>
           </span>
           <span className="fa-right">
@@ -333,23 +394,29 @@ function FooterActions({ isExpanded, onLogout, userName }) {
           </span>
         </div>
 
-        {/* Language row */}
         <div
           className="fa-row-btn is-control"
           onClick={() => langBtnRef.current?.click()}
         >
           <span className="fa-left">
-            <span className="fa-ico" >
+            <span className="fa-ico">
               <FiGlobe />
             </span>
             <span className="fa-label">Language</span>
           </span>
           <span className="fa-right">
-            {/* LanguageSwitcher should accept forwardRef + showIcon */}
             <LanguageSwitcher ref={langBtnRef} showIcon={false} />
           </span>
         </div>
-
+        {/* Settings row */}
+        <NavLink to="/settings" className="fa-row-btn is-control">
+          <span className="fa-left">
+            <span className="fa-ico">
+              <FiSettings />
+            </span>
+            <span className="fa-label">{t("settings")}</span>
+          </span>
+        </NavLink>
         {/* Logout row */}
         <Button
           variant="outline-danger"
@@ -367,35 +434,53 @@ function FooterActions({ isExpanded, onLogout, userName }) {
     );
   }
 
-  // Collapsed: compact squares (use real controls)
   return (
     <div className="footer-actions">
       <OverlayTrigger
         placement="right"
-        overlay={<Tooltip>{userName || "User"}</Tooltip>}
+        overlay={<Tooltip id="tt-user">{userName || "User"}</Tooltip>}
       >
         <div className="action-compact is-info">
           <FiUser />
         </div>
       </OverlayTrigger>
 
-      <OverlayTrigger placement="right" overlay={<Tooltip>Theme</Tooltip>}>
+      <OverlayTrigger
+        placement="right"
+        overlay={<Tooltip id="tt-theme">Theme</Tooltip>}
+      >
         <div className="action-compact is-control">
           <ModeToggle />
         </div>
       </OverlayTrigger>
 
-      <OverlayTrigger placement="right" overlay={<Tooltip>Language</Tooltip>}>
+      <OverlayTrigger
+        placement="right"
+        overlay={<Tooltip id="tt-lang">Language</Tooltip>}
+      >
         <div className="action-compact is-control">
           <LanguageSwitcher />
         </div>
       </OverlayTrigger>
 
-      <OverlayTrigger placement="right" overlay={<Tooltip>Logout</Tooltip>}>
+      <OverlayTrigger
+        placement="right"
+        overlay={<Tooltip id="tt-settings">{t("settings")}</Tooltip>}
+      >
+        <NavLink to="/settings" className="action-compact is-control">
+          <FiSettings />
+        </NavLink>
+      </OverlayTrigger>
+
+      <OverlayTrigger
+        placement="right"
+        overlay={<Tooltip id="tt-logout">Logout</Tooltip>}
+      >
         <div className="action-compact is-action" onClick={onLogout}>
           <FiLogOut />
         </div>
       </OverlayTrigger>
+
     </div>
   );
 }

@@ -132,10 +132,22 @@ class UnitSystemCategoryDefinition(models.Model):
 
 # ---------- Data Source ----------
 class DataSource(models.Model):
+    DATA_SOURCE_TYPES = [
+        ("INPUT", "Input"),
+        ("OUTPUT", "Output"),
+        ("PROCESS", "Process"),
+    ]
+
     data_source_name = models.CharField("Data Source", max_length=50, unique=True)
+    data_source_type = models.CharField(
+        "Data Source Type",
+        max_length=20,
+        choices=DATA_SOURCE_TYPES,
+        default="INPUT",
+    )
 
     def __str__(self):
-        return self.data_source_name
+        return f"{self.data_source_name} ({self.get_data_source_type_display()})"
 
     class Meta:
         db_table = 'apiapp_data_source'

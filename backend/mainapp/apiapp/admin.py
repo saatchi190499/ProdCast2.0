@@ -63,8 +63,10 @@ class UnitSystemCategoryDefinitionAdmin(admin.ModelAdmin):
 # ---------- Data Source ----------
 @admin.register(DataSource)
 class DataSourceAdmin(admin.ModelAdmin):
-    list_display = ('data_source_name',)
-    search_fields = ('data_source_name',)
+    list_display = ("data_source_name", "get_data_source_type_display")
+    search_fields = ("data_source_name",)
+    list_filter = ("data_source_type",)   # adds a sidebar filter
+
 
 # ---------- Scenario Component (универсальный) ----------
 @admin.register(ScenarioComponent)

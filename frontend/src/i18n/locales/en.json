@@ -90,7 +90,8 @@
     "noTasks": "No tasks found",
     "loading": "Loading...",
     "failedLoadWorkers": "Failed to load workers",
-    "nothingSelected": "Nothing selected"
+    "nothingSelected": "Nothing selected",
+    "processes": "Processes"
     
 
 }

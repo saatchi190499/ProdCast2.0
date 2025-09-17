@@ -128,12 +128,11 @@ export default function EventRecordsPage() {
         const types = metaRes.data.types;
         const instances = metaRes.data.instances;
         const properties = metaRes.data.properties;
-        console.log("Metadata:", metaRes.data);
         setTypeOptions(types);
         setInstanceOptions(instances);
         setPropertyOptions(properties);
 
-        const recordsRes = await api.get(`/components/${id}/events/`);
+        const recordsRes = await api.get(`/components/events/${id}`);
 
         const converted = convertIdsToNames(recordsRes.data, types, instances, properties);
         setRecords(converted);
@@ -354,7 +353,7 @@ export default function EventRecordsPage() {
 
     try {
       const dataToSave = convertNamesToIds(records);
-      await api.post(`/components/${id}/events/`, dataToSave);
+      await api.post(`/components/events/${id}`, dataToSave);
       alert(t("savedSuccessfully"));
     } catch (err) {
       console.error("Save error:", err);
@@ -437,8 +436,9 @@ export default function EventRecordsPage() {
                 { key: "sub_data_source", label: t("category") },
                 { key: "description", label: t("description") },
                 { key: "actions", label: t("actions") }
-              ].map(({ key, label }, idx) => (
+              ].map(({ key, label }) => (
                 <th
+                  key={key}
                   className={`sortable ${sortKey === key ? "sorted" : ""}`}
                   onClick={() => key !== "actions" && handleSort(key)}
                   style={{ cursor: key !== "actions" ? "pointer" : "default" }}
@@ -448,6 +448,7 @@ export default function EventRecordsPage() {
               ))}
             </tr>
           </thead>
+
           <tbody>
             {filteredRecords.map((r, i) => {
               const realIndex = records.findIndex(x => x === r);

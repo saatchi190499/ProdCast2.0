@@ -91,6 +91,7 @@
     "noTasks": "Задачи не найдены",
     "loading": "Загрузка...",
     "failedLoadWorkers": "Не удалось загрузить рабочих",
-    "nothingSelected": "Ничего не выбрано"
+    "nothingSelected": "Ничего не выбрано",
+    "processes": "Процессы"
 
 }
