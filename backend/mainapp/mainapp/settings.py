@@ -2,16 +2,21 @@ import os
 from pathlib import Path
 from datetime import timedelta
 import logging
+import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+env = environ.Env(
+    DJANGO_DEBUG=(bool, True)  # default True if not set
+)
+environ.Env.read_env(Path(__file__).resolve().parents[2] / ".env.development")
 
 # --- Security / Debug ---
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key-only-for-local")
-DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "*").split(",") if h.strip()]
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-secret-key")
+DEBUG = env("DJANGO_DEBUG", default=True)
+ALLOWED_HOSTS = [h.strip() for h in env("DJANGO_ALLOWED_HOSTS", default="*").split(",") if h.strip()]
 
 # --- CORS ---
-_raw_cors = os.getenv("CORS_ALLOWED_ORIGINS", "").strip()
+_raw_cors = env("CORS_ALLOWED_ORIGINS", default="").strip()
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _raw_cors.split(",") if o.strip()]
 
 INSTALLED_APPS = [
@@ -31,7 +36,6 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -63,11 +67,11 @@ WSGI_APPLICATION = "mainapp.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB", "prodcast2_0"),
-        "USER": os.getenv("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "postgres"),
-        "HOST": os.getenv("POSTGRES_HOST", "localhost"),  # в compose => "db"
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "NAME": env("POSTGRES_DB", default="prodcast2"),
+        "USER": env("POSTGRES_USER", default="postgres"),
+        "PASSWORD": env("POSTGRES_PASSWORD", default="1"),
+        "HOST": env("POSTGRES_HOST", default="localhost"),
+        "PORT": env("POSTGRES_PORT", default="5432"),
     }
 }
 
@@ -106,7 +110,7 @@ SIMPLE_JWT = {
 
 # --- i18n / timezone ---
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "Asia/Almaty")
+TIME_ZONE = env("DJANGO_TIME_ZONE", default="Asia/Almaty")
 USE_I18N = True
 USE_TZ = True
 
@@ -117,8 +121,8 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # --- Celery / Redis ---
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://localhost:6379/1")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

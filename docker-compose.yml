@@ -2,15 +2,12 @@ services:
   db:
     image: postgres:17
     env_file:
-      - .env.development
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      - ./backend/.env.development
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
 
   redis:
     image: redis:7
@@ -26,7 +23,7 @@ services:
       context: ./backend
     command: python manage.py runserver 0.0.0.0:8000
     env_file:
-      - .env.development
+      - ./backend/.env.development   # для Django
     ports:
       - "8000:8000"
     depends_on:
@@ -40,11 +37,12 @@ services:
       - ./frontend:/app
       - /app/node_modules
     ports:
-      - "80:80"
+      - "80:80"   # лучше dev-сервер оставить на 3000
     env_file:
-      - .env.development
+      - ./frontend/.env.development  # для Vite
     environment:
       NODE_ENV: development
+    command: ["npm", "run", "dev", "--", "--host"]   # чтобы Vite слушал 0.0.0.0
     depends_on:
       - backend
 
