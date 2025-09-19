@@ -3,12 +3,22 @@ from apiapp.models import DataSource, ObjectType, ObjectInstance
 from django.contrib.auth.models import Group
 
 class Command(BaseCommand):
-    help = "Initialize default DataSources and ObjectTypes"
+    help = "Initialize default DataSources, ObjectTypes, ObjectInstances, and Groups"
 
     def handle(self, *args, **kwargs):
-        for name in ["Models", "Events"]:
-            DataSource.objects.get_or_create(data_source_name=name)
+        # --- DataSources (с типами) ---
+        data_sources = [
+            ("Models", "INPUT"),
+            ("Events", "INPUT"),
+            ("Workflows", "PROCESS"),
+        ]
+        for name, dtype in data_sources:
+            DataSource.objects.get_or_create(
+                data_source_name=name,
+                defaults={"data_source_type": dtype}
+            )
 
+        # --- ObjectTypes ---
         for name in ["WELL", "PIPE", "SOURCE"]:
             ObjectType.objects.get_or_create(object_type_name=name)
 
@@ -16,9 +26,12 @@ class Command(BaseCommand):
         for group_name in ["admin", "user", "guest"]:
             Group.objects.get_or_create(name=group_name)
 
-        # Example ObjectInstances
-        well_type = ObjectType.objects.get(object_type_name="WELL")
+        # --- Example ObjectInstances ---
+        well_type, _ = ObjectType.objects.get_or_create(object_type_name="WELL")
         for instance_name in ["Well-1", "Well-2", "Well-3", "Well-4", "Well-5"]:
-            ObjectInstance.objects.get_or_create(object_type=well_type, object_instance_name=instance_name)
+            ObjectInstance.objects.get_or_create(
+                object_type=well_type,
+                object_instance_name=instance_name
+            )
 
-        self.stdout.write(self.style.SUCCESS("Default data initialized!"))
+        self.stdout.write(self.style.SUCCESS("✅ Default data with types initialized!"))

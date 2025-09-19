@@ -31,3 +31,4 @@ celery
 django-celery-results
 redis
 whitenoise
+django-environ
