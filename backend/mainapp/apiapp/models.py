@@ -319,7 +319,6 @@ class ObjectTypeProperty(models.Model):
     object_type = models.ForeignKey(ObjectType, on_delete=models.CASCADE, verbose_name="Object Type")
     object_type_property_name = models.CharField("Object Type Property", max_length=50)
     object_type_property_category = models.CharField("Category", max_length=50)
-    tag = models.CharField("Tag", max_length=100, blank=True, null=True)
     openserver = models.CharField("OpenServer", max_length=100, blank=True, null=True)
     
     unit_category = models.ForeignKey(UnitCategory, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Unit Category")
@@ -359,7 +358,7 @@ class MainClass(models.Model):
     value = models.DecimalField(max_digits=38, decimal_places=28, db_column='value', null=True)
     date_time = models.DateTimeField("Date", db_column='date', null=True)
     # ⬇️ УДАЛЕНО: sub_data_source = models.CharField(...)
-
+    tag = models.CharField("Tag", max_length=100, blank=True, null=True)
     description = models.TextField("Description", null=True, blank=True)
 
     @property

@@ -178,9 +178,9 @@ class ObjectInstanceAdmin(admin.ModelAdmin):
 
 @admin.register(ObjectTypeProperty)
 class ObjectTypePropertyAdmin(admin.ModelAdmin):
-    list_display = ('object_type', 'object_type_property_name', 'object_type_property_category', 'tag', 'unit_category', 'unit')
+    list_display = ('object_type', 'object_type_property_name', 'object_type_property_category', 'unit_category', 'unit')
     list_filter = ('object_type', 'object_type_property_category', 'unit_category')  # filter by category instead of unit
-    search_fields = ('object_type_property_name', 'tag', 'openserver')
+    search_fields = ('object_type_property_name', 'openserver')
     readonly_fields = ('unit',)  # make 'unit' read-only
 
     fieldsets = (
@@ -188,7 +188,7 @@ class ObjectTypePropertyAdmin(admin.ModelAdmin):
             'fields': ('object_type', 'object_type_property_name', 'object_type_property_category')
         }),
         ('Integration Details', {
-            'fields': ('tag', 'openserver', 'unit_category', 'unit')
+            'fields': ( 'openserver', 'unit_category', 'unit')
         }),
     )
 
@@ -198,7 +198,7 @@ class ObjectTypePropertyAdmin(admin.ModelAdmin):
 class MainClassAdmin(admin.ModelAdmin):
     list_display = (
         'data_set_id', 'data_source_name', 'data_source_id', 'object_type',
-        'object_instance', 'object_type_property', 'value', 'date_time',
+        'object_instance', 'object_type_property', 'value', 'date_time', 'tag',
     )
     list_filter = (
         'data_source_name', 'object_type', 'object_instance',
@@ -224,6 +224,35 @@ class MainClassAdmin(admin.ModelAdmin):
             'fields': ('value', 'date_time')
         }),
         ('Additional Information', {
-            'fields': ('description',)
+            'fields': ('description', 'tag')
         }),
     )
+
+from django.contrib import admin
+from .models import Workflow
+
+
+@admin.register(Workflow)
+class WorkflowAdmin(admin.ModelAdmin):
+    list_display = ("id", "component", "updated_at")   # колонки в списке
+    search_fields = ("component__name",)               # поиск по имени компонента
+    list_filter = ("updated_at",)                      # фильтр справа
+    readonly_fields = ("updated_at", "preview_code")   # поля только для чтения
+
+    fieldsets = (
+        (None, {
+            "fields": ("component", "nodes", "edges", "code_file")
+        }),
+        ("System Info", {
+            "fields": ("updated_at", "preview_code"),
+            "classes": ("collapse",),
+        }),
+    )
+
+    def preview_code(self, obj):
+        """Отображает кусочек Python-кода в админке"""
+        if obj.python_code:
+            return f"<pre style='max-height:200px; overflow:auto;'>{obj.python_code[:1000]}</pre>"
+        return "No code uploaded"
+    preview_code.allow_tags = True
+    preview_code.short_description = "Python Code Preview"
