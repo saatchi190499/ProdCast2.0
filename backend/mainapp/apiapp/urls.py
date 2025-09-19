@@ -6,6 +6,7 @@ from .views.scenario_view import *
 from .views.object_meta_data_view import *
 from .views.unit_view import *
 from .views.run_calculation_view import *
+from .views.workflow_view import *
 
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -28,7 +29,7 @@ urlpatterns = [
     path("components/", ScenarioComponentCreateView.as_view(), name="components-create"),
     path("components/<int:pk>/", ScenarioComponentDetailView.as_view()),
     path("components/events/<int:component_id>", EventRecordsView.as_view()),
-    path("components/events/<int:component_id>", WorkflowRecordsView.as_view()),
+    path("components/workflows/<int:component_id>/", WorkflowRecordsView.as_view()),
 
     path("object-metadata/", ObjectMetadataView.as_view()),
     path("unit-system-property-mapping/", UnitSystemPropertyMappingView.as_view()),

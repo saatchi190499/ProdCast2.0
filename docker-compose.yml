@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:17
     env_file:
-      - ./backend/.env.development
+      - ./backend/mainapp/.env.development
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -23,7 +23,7 @@ services:
       context: ./backend
     command: python manage.py runserver 0.0.0.0:8000
     env_file:
-      - ./backend/.env.development   # для Django
+      - ./backend/mainapp/.env.development   # для Django
     ports:
       - "8000:8000"
     depends_on:

@@ -8,8 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DJANGO_DEBUG=(bool, True)  # default True if not set
 )
-environ.Env.read_env(Path(__file__).resolve().parents[2] / ".env.development")
-
+environ.Env.read_env(BASE_DIR / ".env.development", overwrite=True)
 # --- Security / Debug ---
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-secret-key")
 DEBUG = env("DJANGO_DEBUG", default=True)
@@ -74,7 +73,7 @@ DATABASES = {
         "PORT": env("POSTGRES_PORT", default="5432"),
     }
 }
-
+print(env("POSTGRES_DB"))
 # --- Auth & JWT ---
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

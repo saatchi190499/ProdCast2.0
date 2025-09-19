@@ -4,6 +4,7 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+import os
 
 # --- New Unit System Models ---
 
@@ -394,4 +395,37 @@ class MainClass(models.Model):
 def validate_object_instance(sender, instance, **kwargs):
     if instance.object_instance.object_type != instance.object_type:
         raise ValidationError("Object instance must belong to the selected object type.")
+    
 
+# ---------- Workflow ----------
+def workflow_code_path(instance, filename):
+    # Save file as media/workflows/{component_id}.py
+    return os.path.join("workflows", f"{instance.component.id}.py")
+
+class Workflow(models.Model):
+    component = models.OneToOneField(
+        "ScenarioComponent",
+        on_delete=models.CASCADE,
+        related_name="workflow"
+    )
+    nodes = models.JSONField(default=list, blank=True)
+    edges = models.JSONField(default=list, blank=True)
+    code_file = models.FileField(
+        upload_to=workflow_code_path,
+        blank=True,
+        null=True
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def python_code(self):
+        """
+        Convenience property to read file content.
+        """
+        if self.code_file and self.code_file.path:
+            try:
+                with open(self.code_file.path, "r", encoding="utf-8") as f:
+                    return f.read()
+            except FileNotFoundError:
+                return ""
+        return ""

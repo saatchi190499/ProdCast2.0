@@ -3,6 +3,8 @@ from .models import (
     ScenarioClass, ServersClass, ScenarioComponent, ScenarioComponentLink,
     ObjectType, ObjectInstance, ObjectTypeProperty, DataSource, MainClass, ScenarioLog
 )
+import os
+from django.conf import settings
 
 # ---------- Servers ----------
 class ServersClassSerializer(serializers.ModelSerializer):
@@ -187,3 +189,40 @@ class MainClassSerializer(serializers.ModelSerializer):
         validated_data["data_source_name"] = self.context.get("data_source_name")
         return super().create(validated_data)
 
+# ---------- Workflow ----------
+from rest_framework import serializers
+from .models import Workflow
+from pathlib import Path
+class WorkflowSerializer(serializers.ModelSerializer):
+    code_input = serializers.CharField(write_only=True, required=False)
+    code_content = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Workflow
+        fields = [
+            "id", "component", "nodes", "edges",
+            "code_input", "code_file", "code_content", "updated_at"
+        ]
+        read_only_fields = ["id", "updated_at", "code_file", "code_content"]
+
+    def get_code_content(self, obj):
+        return obj.python_code  # из @property модели
+
+    def update(self, instance, validated_data):
+        # Обновляем nodes и edges
+        instance.nodes = validated_data.get("nodes", instance.nodes)
+        instance.edges = validated_data.get("edges", instance.edges)
+
+        # Если передали код — пишем в файл
+        code = validated_data.get("code_input", None)
+        if code is not None:
+            media_path = Path(settings.MEDIA_ROOT) / "workflows"
+            media_path.mkdir(parents=True, exist_ok=True)
+
+            file_path = media_path / f"{instance.component.id}.py"
+            file_path.write_text(code, encoding="utf-8")
+
+            instance.code_file.name = f"workflows/{instance.component.id}.py"
+
+        instance.save()
+        return instance
