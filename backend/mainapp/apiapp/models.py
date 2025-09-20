@@ -5,7 +5,7 @@ from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 import os
-
+from smart_selects.db_fields import ChainedForeignKey
 # --- New Unit System Models ---
 
 class UnitSystem(models.Model):
@@ -353,7 +353,16 @@ class MainClass(models.Model):
     data_source_id = models.IntegerField()
     object_type = models.ForeignKey(ObjectType, on_delete=models.CASCADE, verbose_name="Object Type")
     object_instance = models.ForeignKey(ObjectInstance, on_delete=models.CASCADE, verbose_name="Object Instance")
-    object_type_property = models.ForeignKey(ObjectTypeProperty, on_delete=models.CASCADE, verbose_name="Object Type Property")
+    object_type_property = ChainedForeignKey(
+        ObjectTypeProperty,
+        chained_field="object_type",              # на какое поле смотрим
+        chained_model_field="object_type",        # с каким полем в ObjectTypeProperty связываем
+        show_all=False,
+        auto_choose=True,
+        sort=True,
+        on_delete=models.CASCADE,
+        verbose_name="Object Type Property"
+    )
 
     value = models.DecimalField(max_digits=38, decimal_places=28, db_column='value', null=True)
     date_time = models.DateTimeField("Date", db_column='date', null=True)

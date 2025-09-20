@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "django_celery_results",
     "apiapp",
+    "smart_selects",
 ]
 
 MIDDLEWARE = [
@@ -63,17 +64,33 @@ TEMPLATES = [
 WSGI_APPLICATION = "mainapp.wsgi.application"
 
 # --- Database ---
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": env("POSTGRES_DB", default="prodcast2"),
+#         "USER": env("POSTGRES_USER", default="postgres"),
+#         "PASSWORD": env("POSTGRES_PASSWORD", default="1"),
+#         "HOST": env("POSTGRES_HOST", default="db"),
+#         "PORT": env("POSTGRES_PORT", default="5432"),
+#     }
+# }
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB", default="prodcast2"),
-        "USER": env("POSTGRES_USER", default="postgres"),
-        "PASSWORD": env("POSTGRES_PASSWORD", default="1"),
-        "HOST": env("POSTGRES_HOST", default="db"),
-        "PORT": env("POSTGRES_PORT", default="5432"),
-    }
+    'default': {
+        'ENGINE': 'mssql',
+        'NAME': 'DOFGI1',
+        'HOST': 'KPCDBS14\\CYRGEN',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'trusted_connection': 'yes',
+        },
+    },
 }
-print(env("POSTGRES_DB"))
+
+
+
+
+
 # --- Auth & JWT ---
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
