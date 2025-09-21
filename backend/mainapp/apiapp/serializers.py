@@ -108,10 +108,16 @@ class ObjectTypeSerializer(serializers.ModelSerializer):
 
 # ---------- ObjectInstance ----------
 class ObjectInstanceSerializer(serializers.ModelSerializer):
+    object_type_name = serializers.CharField(source="object_type.object_type_name", read_only=True)
+
     class Meta:
         model = ObjectInstance
-        fields = ['object_instance_id', 'object_instance_name', 'object_type']
-        read_only_fields = ['object_instance_id']
+        fields = [
+            "object_instance_id",
+            "object_instance_name",
+            "object_type",
+            "object_type_name",
+        ]
 
 
 # ---------- ObjectTypeProperty ----------

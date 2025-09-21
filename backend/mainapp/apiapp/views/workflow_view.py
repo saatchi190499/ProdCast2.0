@@ -33,3 +33,35 @@ class WorkflowRecordsView(APIView):
         serializer.save()
         return Response(serializer.data)
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+import tempfile, subprocess, os
+
+class RunWorkflowView(APIView):
+    def post(self, request, *args, **kwargs):
+        code = request.data.get("code", "")
+        if not code:
+            return Response({"error": "No code provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".py", mode="w") as tmp:
+            tmp.write(code)
+            tmp_path = tmp.name
+
+        try:
+            result = subprocess.run(
+                ["python", tmp_path],
+                capture_output=True,
+                text=True,
+                timeout=300  # ограничение 5 мин
+            )
+            return Response({
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "exit_code": result.returncode
+            })
+        except subprocess.TimeoutExpired:
+            return Response({"error": "Execution timed out"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)

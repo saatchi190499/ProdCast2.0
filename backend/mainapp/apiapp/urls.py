@@ -7,6 +7,8 @@ from .views.object_meta_data_view import *
 from .views.unit_view import *
 from .views.run_calculation_view import *
 from .views.workflow_view import *
+from .views.update_gap_instance_view import *
+
 
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -32,6 +34,8 @@ urlpatterns = [
     path("components/workflows/<int:component_id>/", WorkflowRecordsView.as_view()),
 
     path("object-metadata/", ObjectMetadataView.as_view()),
+    path("object-instances/", ObjectInstanceListView.as_view(), name="object-instances"),
+    path("update-instances/", UpdateInstancesView.as_view(), name="update-instances"),
     path("unit-system-property-mapping/", UnitSystemPropertyMappingView.as_view()),
 
     path('scenarios/create/', ScenarioCreateView.as_view(), name='scenario-create'),
@@ -41,6 +45,7 @@ urlpatterns = [
     path("scenarios/<int:scenario_id>/start/", RunCalculationView.as_view(), name="start-scenario"),
     path("scenarios/<int:scenario_id>/logs/", ScenarioLogsView.as_view(), name="scenario-logs"),
     path("workers/schedule/", workers_schedule_view),
+    path("run_workflow/", RunWorkflowView.as_view(), name="run_workflow"),
 
     #path("task-status/<str:task_id>/", get_task_status),
 ]

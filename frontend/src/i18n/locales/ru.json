@@ -92,6 +92,7 @@
     "loading": "Загрузка...",
     "failedLoadWorkers": "Не удалось загрузить рабочих",
     "nothingSelected": "Ничего не выбрано",
-    "processes": "Процессы"
+    "processes": "Процессы",
+    "equip_management": "Управление оборудованием"
 
 }

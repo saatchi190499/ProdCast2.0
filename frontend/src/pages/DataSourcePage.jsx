@@ -374,7 +374,7 @@ export default function DataSourcePage() {
                     <td>
                       {c.file ? (
                         <a
-                          href={`${api?.defaults?.baseURL ?? ""}${c.file}`}
+                          href={`${c.file}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           download

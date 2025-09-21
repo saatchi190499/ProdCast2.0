@@ -1,6 +1,6 @@
 // WorkflowRecordsPage.jsx
 import { useParams } from "react-router-dom";
-import WorkflowBuilder from "./WorkflowEditor";
+import WorkflowBuilder from "./WorkflowBuilder";
 import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
 

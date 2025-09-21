@@ -1,6 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from apiapp.models import ObjectType, ObjectInstance, ObjectTypeProperty
+from ..serializers import ObjectInstanceSerializer
+from rest_framework import status
 
 class ObjectMetadataView(APIView):
     def get(self, request):
@@ -39,3 +41,9 @@ class ObjectMetadataView(APIView):
             "instances": instances_by_type,
             "properties": properties_by_type
         })
+
+class ObjectInstanceListView(APIView):
+    def get(self, request):
+        instances = ObjectInstance.objects.select_related("object_type").all()
+        serializer = ObjectInstanceSerializer(instances, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

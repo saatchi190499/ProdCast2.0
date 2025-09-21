@@ -91,7 +91,8 @@
     "loading": "Loading...",
     "failedLoadWorkers": "Failed to load workers",
     "nothingSelected": "Nothing selected",
-    "processes": "Processes"
+    "processes": "Processes",
+    "equip_management": "Equipment Management"
     
 
 }

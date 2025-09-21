@@ -33,3 +33,4 @@ redis
 whitenoise
 django-environ
 django-smart-selects
+pywin32
