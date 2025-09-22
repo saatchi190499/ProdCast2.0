@@ -95,6 +95,9 @@ def get_float(srv: PetexServer, tag: str) -> float:
 def start_gap(srv: PetexServer):
     return srv.do_cmd("GAP.Start")
 
+def close(srv: PetexServer):
+    return srv.do_cmd("GAP.SHUTDOWN")
+
 def open_gap_model(srv: PetexServer, file_path: str):
     return srv.do_cmd(f"GAP.OPENFILE('{file_path}')")
 

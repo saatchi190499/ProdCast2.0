@@ -7,6 +7,7 @@ from .views.object_meta_data_view import *
 from .views.unit_view import *
 from .views.run_calculation_view import *
 from .views.workflow_view import *
+from .views.petex_view import *
 from .views.update_gap_instance_view import *
 
 
@@ -45,7 +46,16 @@ urlpatterns = [
     path("scenarios/<int:scenario_id>/start/", RunCalculationView.as_view(), name="start-scenario"),
     path("scenarios/<int:scenario_id>/logs/", ScenarioLogsView.as_view(), name="scenario-logs"),
     path("workers/schedule/", workers_schedule_view),
-    path("run_workflow/", RunWorkflowView.as_view(), name="run_workflow"),
+
+
+    path("run_cell/", run_cell, name="run-cell"),
+    path("run_all/", run_all, name="run-cell"),
+    path("reset_context/", reset_context),
+    path("variables/", list_variables),
+    # path("functions/", list_functions),
+    path("petex/introspect/", list_petex_functions, name="petex-introspect"),
+    path("delete_var/", delete_var, name="petex-introspect"),
+    path("set_var/", set_var, name="petex-introspect"),
 
     #path("task-status/<str:task_id>/", get_task_status),
 ]

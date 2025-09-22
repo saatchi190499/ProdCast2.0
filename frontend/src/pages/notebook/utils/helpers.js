@@ -18,7 +18,7 @@ export const downloadText = (filename, text) => {
   URL.revokeObjectURL(url);
 };
 
-export const TYPE_OPTIONS = ["int", "float", "str", "bool", "any"];
+export const TYPE_OPTIONS = ["int", "float", "str", "bool", "any", "var", "func"];
 
 export const stringifyByType = (val, type) => {
   if (type === "int") return String(parseInt(val ?? 0, 10));
