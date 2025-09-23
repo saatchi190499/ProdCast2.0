@@ -58,7 +58,7 @@ def get_scenarios_status(request):
                     meta = json.loads(data)
                     redis_status = meta.get("status")
                 except Exception as e:
-                    print(f"Ошибка парсинга Redis {scenario.task_id}: {e}")
+                    print(f"Redis parsing error {scenario.task_id}: {e}")
 
         if redis_status:
             status = redis_status
@@ -99,12 +99,12 @@ def get_scenarios_status(request):
                     "name": scenario_name,
                     "task_id": task_id,
                     "status": "QUEUED",
-                    "description": f"Ожидает запуска. Аргументы: {args}",
+                    "description": f"Pending start. Arguments: {args}",
                 })
             except Exception as e:
-                print(f"Ошибка парсинга queued task: {e}")
+                print(f"Failed to parse queued task: {e}")
     except Exception as e:
-        print(f"Ошибка чтения очереди Redis: {e}")
+        print(f"Failed to read Redis queue: {e}")
 
     return JsonResponse(result)
 

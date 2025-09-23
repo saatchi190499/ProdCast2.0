@@ -232,27 +232,45 @@ from django.contrib import admin
 from .models import Workflow
 
 
+from django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse
+from .models import Workflow
+
+
 @admin.register(Workflow)
 class WorkflowAdmin(admin.ModelAdmin):
-    list_display = ("id", "component", "updated_at")   # колонки в списке
-    search_fields = ("component__name",)               # поиск по имени компонента
-    list_filter = ("updated_at",)                      # фильтр справа
-    readonly_fields = ("updated_at", "preview_code")   # поля только для чтения
-
-    fieldsets = (
-        (None, {
-            "fields": ("component", "nodes", "edges", "code_file")
-        }),
-        ("System Info", {
-            "fields": ("updated_at", "preview_code"),
-            "classes": ("collapse",),
-        }),
+    list_display = (
+        "id",
+        "component",
+        "updated_at",
+        "code_link",
+        "ipynb_link",
     )
+    search_fields = ("component__name",)
+    readonly_fields = ("updated_at", "code_file", "ipynb_file", "preview_cells")
 
-    def preview_code(self, obj):
-        """Отображает кусочек Python-кода в админке"""
-        if obj.python_code:
-            return f"<pre style='max-height:200px; overflow:auto;'>{obj.python_code[:1000]}</pre>"
-        return "No code uploaded"
-    preview_code.allow_tags = True
-    preview_code.short_description = "Python Code Preview"
+    def code_link(self, obj):
+        if obj.code_file:
+            return format_html('<a href="{}" download>📄 Download .py</a>', obj.code_file.url)
+        return "-"
+    code_link.short_description = "Python file"
+
+    def ipynb_link(self, obj):
+        if obj.ipynb_file:
+            return format_html('<a href="{}" download>📘 Download .ipynb</a>', obj.ipynb_file.url)
+        return "-"
+    ipynb_link.short_description = "Jupyter file"
+
+    def preview_cells(self, obj):
+        if not obj.cells:
+            return "(empty)"
+        # show first few cells as preview
+        html = "<ul>"
+        for c in obj.cells[:5]:
+            label = c.get("type", "unknown")
+            code = c.get("source") or str(c.get("metadata", ""))[:50]
+            html += f"<li><b>{label}</b>: {code}</li>"
+        html += "</ul>"
+        return format_html(html)
+    preview_cells.short_description = "Cells Preview"

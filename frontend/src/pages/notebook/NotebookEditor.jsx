@@ -6,7 +6,17 @@ import api from "../../utils/axiosInstance";
 import { blockToPythonFromCell } from "./utils/blockToPythonFromCell";
 import { usePetexTips } from "./context/PetexTipsContext";
 import { useMonaco } from "@monaco-editor/react";
-import { registerPythonProviders } from "./utils/registerPythonProviders";
+import { useParams } from "react-router-dom";
+import { registerPythonProviders } from "./utils/registerPythonProviders"; import {
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  Play,
+  Edit3,
+  CheckCircle2,
+  XCircle
+} from "lucide-react";
+
 
 
 export default function NotebookEditor() {
@@ -17,7 +27,28 @@ export default function NotebookEditor() {
   const [isRunning, setIsRunning] = useState(false);
   const { tips, refreshTips, deleteVar, addOrUpdateVar } = usePetexTips();
   const monaco = useMonaco();
+  const { id } = useParams(); // workflow id from route
 
+  useEffect(() => {
+    if (id) {
+      api.get(`/components/workflows/${id}/`)
+        .then((res) => {
+          setCells(res.data.cells || []);
+        })
+        .catch((err) => console.error("Failed to load workflow", err));
+    }
+  }, [id]);
+
+  // 🔹 Save workflow
+  const saveNotebook = async () => {
+    try {
+      await api.patch(`/components/workflows/${id}/`, { cells });
+      alert("✅ Notebook saved successfully!");
+    } catch (err) {
+      console.error("Failed to save workflow", err);
+      alert("❌ Failed to save notebook");
+    }
+  };
   // 🔹 Centralized provider registration
   useEffect(() => {
     if (monaco && tips) {
@@ -28,19 +59,20 @@ export default function NotebookEditor() {
   const createCell = (type) => {
     switch (type) {
       case "code":
-        return { id: uuidv4(), type, source: "" };
+        return { id: uuidv4(), type, source: "", label: "Code Cell" };
       case "variable":
-        return { id: uuidv4(), type, metadata: { variables: [{ name: "x", type: "int", value: 0 }] } };
+        return { id: uuidv4(), type, metadata: { variables: [{ name: "x", type: "int", value: 0 }] }, label: "Variable Cell" };
       case "function":
-        return { id: uuidv4(), type, metadata: { name: "my_func", params: [], body: "pass" } };
+        return { id: uuidv4(), type, metadata: { name: "my_func", params: [], body: "pass" }, label: "Function Cell" };
       case "loop":
-        return { id: uuidv4(), type, metadata: { indexVar: "i", count: 5, body: "pass" } };
+        return { id: uuidv4(), type, metadata: { indexVar: "i", count: 5, body: "pass" }, label: "Loop Cell" };
       case "condition":
-        return { id: uuidv4(), type, metadata: { condition: "True" } };
+        return { id: uuidv4(), type, metadata: { condition: "True" }, label: "Condition Cell" };
       default:
-        return { id: uuidv4(), type: "code", source: "" };
+        return { id: uuidv4(), type: "code", source: "", label: "Code Cell" };
     }
   };
+
 
   const addCell = (type) => setCells((p) => [...p, createCell(type)]);
   const updateCell = (id, updated) => setCells((p) => p.map(c => c.id === id ? { ...c, ...updated } : c));
@@ -67,6 +99,23 @@ export default function NotebookEditor() {
 
     refreshTips(); // refresh autocomplete tips
   };
+
+  // 🔹 Reorder helpers
+  const reorderCells = (from, to) => {
+    setCells((prev) => {
+      const copy = [...prev];
+      const [moved] = copy.splice(from, 1);
+      // bump version so Monaco remounts cleanly
+      copy.splice(to, 0, { ...moved, version: (moved.version || 0) + 1 });
+      return copy;
+    });
+  };
+
+  const moveCellUp = (idx) => idx > 0 && reorderCells(idx, idx - 1);
+  const moveCellDown = (idx) => idx < cells.length - 1 && reorderCells(idx, idx + 1);
+
+
+
 
   const runOne = async (cell) => {
     const code = blockToPythonFromCell(cell);
@@ -135,87 +184,259 @@ export default function NotebookEditor() {
     setStepIdx(0);
   };
 
+  const insertCell = (index, type) => {
+    setCells((prev) => {
+      const newCells = [...prev];
+      newCells.splice(index, 0, createCell(type));
+      return newCells;
+    });
+  };
+
   return (
-    <div style={{ padding: 16 }}>
-      {/* Toolbar */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
-        <button onClick={() => addCell("code")}>+ Code</button>
-        <button onClick={() => addCell("variable")}>+ Variable</button>
-        <button onClick={() => addCell("function")}>+ Function</button>
-        <button onClick={() => addCell("loop")}>+ Loop</button>
-        <button onClick={() => addCell("condition")}>+ Condition</button>
-
-        <div style={{ width: 1, height: 18, background: "#ddd", margin: "0 8px" }} />
-
-        <button onClick={resetKernel}>⟲ Reset Kernel</button>
-        <button onClick={runStep} disabled={isRunning}>▶ Step ({Math.min(stepIdx + 1, cells.length)}/{cells.length || 0})</button>
-        <button onClick={runAll} disabled={isRunning}>⏭ Run All</button>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      {/* 🔹 Toolbar pinned */}
+      <div
+        style={{
+          flex: "0 0 auto",
+          display: "flex",
+          gap: 8,
+          padding: "10px 16px",
+          borderBottom: "1px solid var(--brand-outline)",
+          background: "var(--brand-50a)",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+        }}
+      >
+        <button className="btn-brand" onClick={resetKernel}>⟲ Reset Kernel</button>
+        <button className="btn-brand-outline" onClick={runStep} disabled={isRunning}>
+          ▶ Step ({Math.min(stepIdx + 1, cells.length)}/{cells.length || 0})
+        </button>
+        <button className="btn-brand" onClick={runAll} disabled={isRunning}>⏭ Run All</button>
+        <button className="btn-brand" onClick={saveNotebook}>💾 Save Notebook</button>
       </div>
 
-      {/* Cells */}
-      {cells.map((cell, idx) => {
-        const isActive = idx === stepIdx;
-        const out = outputs[cell.id];
+      {/* 🔹 Scrollable notebook area */}
+      <div
+        className="brand-scroll"
+        style={{
+          flex: "1 1 auto",
+          overflowY: "auto",
+          padding: 16,
+          background: "var(--bs-body-bg)",   // ✅ auto light/dark
+          color: "var(--bs-body-color)",     // ✅ text adapts
+        }}
+      >
+        {/* Empty notebook message */}
+        {cells.length === 0 && (
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <h3 className="ds-heading" style={{ marginBottom: 16 }}>
+              Your notebook is empty
+            </h3>
+            <p style={{ marginBottom: 20 }}>Add your first cell:</p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              <button className="btn-brand" onClick={() => setCells([createCell("code")])}>+ Code</button>
+              <button className="btn-brand" onClick={() => setCells([createCell("variable")])}>+ Variable</button>
+              <button className="btn-brand" onClick={() => setCells([createCell("function")])}>+ Function</button>
+              <button className="btn-brand" onClick={() => setCells([createCell("loop")])}>+ Loop</button>
+              <button className="btn-brand" onClick={() => setCells([createCell("condition")])}>+ Condition</button>
+            </div>
+          </div>
+        )}
 
-        return (
-          <div
-            key={cell.id}
-            style={{
-              border: `2px solid ${isActive ? "#60a5fa" : "#e5e7eb"}`,
-              borderRadius: 8,
-              padding: 10,
-              marginBottom: 10,
-              background: "#fff",
-              boxShadow: isActive ? "0 0 0 3px #93c5fd33" : "none",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <strong>{cell.type.toUpperCase()} Cell</strong>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => runOne(cell)} disabled={isRunning}>▶ Run Cell</button>
-                {cell.type !== "code" && <button onClick={() => setSelectedCell(cell)}>✏️ Edit</button>}
-                <button onClick={() => removeCell(cell.id)}>🗑️ Delete</button>
+        {/* Notebook cells */}
+        {cells.map((cell, idx) => {
+          const isActive = idx === stepIdx;
+          const out = outputs[cell.id];
+
+
+          return (
+            <div
+              key={`${cell.id}-${cell.version || 0}`}
+              className="ds-card"
+              style={{
+                border: `2px solid ${isActive ? "var(--brand)" : "var(--brand-outline)"}`,
+                borderRadius: 12,
+                padding: 10,
+                marginBottom: 20,
+                background: "var(--bs-body-bg)",   // ✅ auto dark/light
+                color: "var(--bs-body-color)",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {/* Header row */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 6,
+                }}
+              >
+                {/* Cell type label on the left */}
+                <input
+                  type="text"
+                  value={cell.label || `${cell.type.toUpperCase()} Cell`}
+                  onChange={(e) => updateCell(cell.id, { label: e.target.value })}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    fontWeight: 600,
+                    fontSize: 13,
+                    color: "var(--bs-body-color)",
+                    outline: "none",
+                    width: "150px",
+                  }}
+                />
+
+                {/* Compact toolbar on the right */}
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button
+                    className="btn-ghost"
+                    style={{ padding: "2px 6px", borderRadius: 8 }}
+                    onClick={() => moveCellUp(idx)}
+                    title="Move Up"
+                  >
+                    <ArrowUp size={16} />
+                  </button>
+                  <button
+                    className="btn-ghost"
+                    style={{ padding: "2px 6px", borderRadius: 8 }}
+                    onClick={() => moveCellDown(idx)}
+                    title="Move Down"
+                  >
+                    <ArrowDown size={16} />
+                  </button>
+                  <button
+                    className="btn-brand-outline"
+                    style={{ padding: "2px 8px", borderRadius: 8 }}
+                    onClick={() => runOne(cell)}
+                    disabled={isRunning}
+                    title="Run Cell"
+                  >
+                    <Play size={16} /> <span style={{ fontSize: 12 }}>Run</span>
+                  </button>
+                  {cell.type !== "code" && (
+                    <button
+                      className="btn-ghost"
+                      style={{ padding: "2px 8px", borderRadius: 8 }}
+                      onClick={() => setSelectedCell(cell)}
+                      title="Edit Cell"
+                    >
+                      <Edit3 size={16} /> <span style={{ fontSize: 12 }}>Edit</span>
+                    </button>
+                  )}
+                  <button
+                    className="btn-danger-outline"
+                    style={{ padding: "2px 6px", borderRadius: 8 }}
+                    onClick={() => removeCell(cell.id)}
+                    title="Delete Cell"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+
+
+
+
+
+              {/* Cell body */}
+              {cell.type === "code" ? (
+                <NotebookCell
+                  cell={cell}
+                  onChange={(updated) => updateCell(cell.id, updated)}
+                  output={out}
+                />
+              ) : (
+                <>
+                  <pre
+                    style={{
+                      background: "var(--brand-50a)",
+                      padding: 8,
+                      borderRadius: 6,
+                      fontSize: 12,
+                      marginBottom: 8,
+                      whiteSpace: "pre-wrap",
+                      color: "var(--bs-body-color)",  // ✅ readable in dark
+                    }}
+                  >
+                    {blockToPythonFromCell(cell)}
+                  </pre>
+                  {out && (
+                    <div style={{ marginTop: 6 }}>
+                      {out.stderr ? (
+                        <div className="cell-error" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <XCircle size={18} style={{ color: "var(--bs-danger-text)" }} />
+                          {out.stderr}
+                        </div>
+                      ) : (
+                        <CheckCircle2 size={18} style={{ color: "var(--brand-800)" }} />
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Per-cell Add Menu */}
+              <div
+                style={{
+                  marginTop: 12,
+                  paddingTop: 8,
+                  borderTop: "1px dashed var(--brand-outline)",
+                  textAlign: "center",
+                }}
+              >
+                <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                  <button className="btn-ghost" onClick={() => insertCell(idx + 1, "code")}>+ Code</button>
+                  <button className="btn-ghost" onClick={() => insertCell(idx + 1, "variable")}>+ Variable</button>
+                  <button className="btn-ghost" onClick={() => insertCell(idx + 1, "function")}>+ Function</button>
+                  <button className="btn-ghost" onClick={() => insertCell(idx + 1, "loop")}>+ Loop</button>
+                  <button className="btn-ghost" onClick={() => insertCell(idx + 1, "condition")}>+ Condition</button>
+                </div>
               </div>
             </div>
+          );
+        })}
 
-            {cell.type === "code" ? (
-              <NotebookCell
-                cell={cell}
-                onChange={(updated) => updateCell(cell.id, updated)}
-                output={out}
-              />
-            ) : (
-              <>
-                {/* Preview of generated Python */}
-                <pre style={{ background: "#f9fafb", padding: 8, borderRadius: 6, fontSize: 12, marginBottom: 8 }}>
-                  {blockToPythonFromCell(cell)}
-                </pre>
-                {/* Output */}
-                {out && (
-                  <div style={{ marginTop: 6 }}>
-                    {out.stderr ? (
-                      <div style={{ color: "red", fontWeight: 500 }}>
-                        ❌ {out.stderr}
-                      </div>
-                    ) : (
-                      <span style={{ color: "green", fontWeight: 500 }}>✔️</span>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
+        {/* Add cell menu at bottom */}
+        {cells.length > 0 && (
+          <div style={{ marginTop: 20, padding: 10, textAlign: "center" }}>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+              <button className="btn-brand" onClick={() => setCells((prev) => [...prev, createCell("code")])}>+ Code</button>
+              <button className="btn-brand" onClick={() => setCells((prev) => [...prev, createCell("variable")])}>+ Variable</button>
+              <button className="btn-brand" onClick={() => setCells((prev) => [...prev, createCell("function")])}>+ Function</button>
+              <button className="btn-brand" onClick={() => setCells((prev) => [...prev, createCell("loop")])}>+ Loop</button>
+              <button className="btn-brand" onClick={() => setCells((prev) => [...prev, createCell("condition")])}>+ Condition</button>
+            </div>
           </div>
-        );
-      })}
+        )}
+      </div>
 
-      {/* Modal for PropertyEditor */}
+      {/* 🔹 Modal editor */}
       {selectedCell && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
           onClick={() => setSelectedCell(null)}
         >
           <div
-            style={{ background: "#fff", padding: 20, borderRadius: 12, minWidth: 560, maxHeight: "80vh", overflowY: "auto" }}
+            className="ds-card"
+            style={{
+              background: "var(--bs-body-bg)",
+              color: "var(--bs-body-color)",
+              padding: 20,
+              borderRadius: 12,
+              minWidth: 560,
+              maxHeight: "80vh",
+              overflowY: "auto",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <PropertyEditor
@@ -230,4 +451,6 @@ export default function NotebookEditor() {
       )}
     </div>
   );
+
+
 }

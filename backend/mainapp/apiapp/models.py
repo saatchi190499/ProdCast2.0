@@ -407,8 +407,11 @@ def validate_object_instance(sender, instance, **kwargs):
 
 # ---------- Workflow ----------
 def workflow_code_path(instance, filename):
-    # Save file as media/workflows/{component_id}.py
     return os.path.join("workflows", f"{instance.component.id}.py")
+
+def workflow_ipynb_path(instance, filename):
+    return os.path.join("workflows", f"{instance.component.id}.ipynb")
+
 
 class Workflow(models.Model):
     component = models.OneToOneField(
@@ -416,20 +419,19 @@ class Workflow(models.Model):
         on_delete=models.CASCADE,
         related_name="workflow"
     )
-    nodes = models.JSONField(default=list, blank=True)
-    edges = models.JSONField(default=list, blank=True)
-    code_file = models.FileField(
-        upload_to=workflow_code_path,
-        blank=True,
-        null=True
-    )
+
+    # notebook cells (list of dicts: {id, type, metadata, source})
+    cells = models.JSONField(default=list, blank=True)
+
+    # exported files
+    code_file = models.FileField(upload_to=workflow_code_path, blank=True, null=True)
+    ipynb_file = models.FileField(upload_to=workflow_ipynb_path, blank=True, null=True)
+
     updated_at = models.DateTimeField(auto_now=True)
 
     @property
     def python_code(self):
-        """
-        Convenience property to read file content.
-        """
+        """Convenience property to read .py file content"""
         if self.code_file and self.code_file.path:
             try:
                 with open(self.code_file.path, "r", encoding="utf-8") as f:
@@ -437,3 +439,6 @@ class Workflow(models.Model):
             except FileNotFoundError:
                 return ""
         return ""
+
+    def __str__(self):
+        return f"Workflow for {self.component}"

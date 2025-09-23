@@ -5,27 +5,24 @@ export function blockToPythonFromCell(cell) {
       return cell.metadata.variables
         .map((v) => {
           const name = v.name || "var";
-          let value = v.value || "None";
-
-          // 🔹 normalize types
-          if (v.type === "int") {
-            value = parseInt(value, 10);
+          let value;
+          if (v.type === "var" || v.type === "func") {
+            value = v.value || "None"; // assign by reference
+          } else if (v.type === "int") {
+            value = parseInt(v.value || 0, 10);
           } else if (v.type === "float") {
-            value = parseFloat(value);
+            value = parseFloat(v.value || 0);
           } else if (v.type === "bool") {
-            value = value === "true" || value === true ? "True" : "False";
+            value = v.value === "true" || v.value === true ? "True" : "False";
           } else if (v.type === "str") {
-            // ensure it's a raw string, no duplicate quotes
-            let safe = String(v.value).replace(/\\/g, "/"); // fix backslashes
+            let safe = String(v.value).replace(/\\/g, "/");
             if (safe.startsWith('"') && safe.endsWith('"')) {
-              safe = safe.slice(1, -1); // remove user-provided quotes
+              safe = safe.slice(1, -1);
             }
             value = `"${safe}"`;
           } else {
-            // fallback: stringify
-            value = JSON.stringify(value);
+            value = JSON.stringify(v.value);
           }
-
           return `${name} = ${value}`;
         })
         .join("\n");

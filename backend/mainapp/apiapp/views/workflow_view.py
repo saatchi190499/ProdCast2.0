@@ -1,37 +1,33 @@
-import json
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django.shortcuts import get_object_or_404
-from ..models import ScenarioComponent, Workflow
+
+from ..models import  Workflow
 from ..serializers import WorkflowSerializer
 
-class WorkflowRecordsView(APIView):
-    permission_classes = [IsAuthenticated]
+from rest_framework import viewsets
+from django.core.files.base import ContentFile
+from datetime import datetime
+from ..utils.notebook_export import block_to_python_from_cells, cells_to_ipynb
 
-    def get(self, request, component_id):
-        component = get_object_or_404(
-            ScenarioComponent,
-            id=component_id,
-            data_source__data_source_name="Workflows"  # 👈 follow FK
-        )
+class WorkflowViewSet(viewsets.ModelViewSet):
+    queryset = Workflow.objects.all()
+    serializer_class = WorkflowSerializer
 
-        workflow, _ = Workflow.objects.get_or_create(component=component)
-        serializer = WorkflowSerializer(workflow, context={"request": request})
-        return Response(serializer.data)
+    def perform_update(self, serializer):
+        instance = serializer.save()
 
-    def put(self, request, component_id):
-        component = get_object_or_404(
-            ScenarioComponent,
-            id=component_id,
-            data_source__data_source_name="Workflows"  # 👈 follow FK
-        )
+        # export .py
+        code = block_to_python_from_cells(instance.cells)
+        py_name = f"workflow_{instance.component.id}_{datetime.now():%Y%m%d_%H%M%S}.py"
+        instance.code_file.save(py_name, ContentFile(code))
 
-        workflow, _ = Workflow.objects.get_or_create(component=component)
-        serializer = WorkflowSerializer(workflow, data=request.data, partial=True, context={"request": request})
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        # export .ipynb
+        ipynb = cells_to_ipynb(instance.cells)
+        ipynb_name = f"workflow_{instance.component.id}_{datetime.now():%Y%m%d_%H%M%S}.ipynb"
+        instance.ipynb_file.save(ipynb_name, ContentFile(ipynb.encode("utf-8")))
+
+        instance.save()
+
+##########################################################################
+
 import io
 from contextlib import redirect_stdout, redirect_stderr
 from rest_framework.decorators import api_view

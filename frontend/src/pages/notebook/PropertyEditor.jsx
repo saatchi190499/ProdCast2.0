@@ -1,14 +1,19 @@
 import { useState } from "react";
-import Editor  from "@monaco-editor/react";
+import Editor from "@monaco-editor/react";
 import { TYPE_OPTIONS } from "./utils/helpers";
 import api from "../../utils/axiosInstance";
 import { usePetexTips } from "./context/PetexTipsContext";
+import { Trash2, Plus } from "lucide-react";import { useTheme } from "../../context/ThemeContext";
+
 
 export default function PropertyEditor({ node, onSave }) {
   const [data, setData] = useState(node.metadata || {});
   const { addOrUpdateVar, deleteVar, refreshTips, tips } = usePetexTips();
+  const { mode } = useTheme();
+
 
   const update = (k, v) => setData((prev) => ({ ...prev, [k]: v }));
+
   const handleSave = async () => {
     if (node.type === "variable") {
       const oldVars = node.metadata?.variables || [];
@@ -32,13 +37,13 @@ export default function PropertyEditor({ node, onSave }) {
         });
       }
 
-      // 🔹 Force refresh after save
       await refreshTips();
     }
 
     onSave(data);
   };
 
+  // 🔹 Variable Cell Editor
   if (node.type === "variable") {
     const vars = data.variables || [];
 
@@ -61,66 +66,110 @@ export default function PropertyEditor({ node, onSave }) {
     };
 
     return (
-      <div>
-        <h4>Variables</h4>
-        {vars.map((v, idx) => {
-          let valueInput = null;
-          if (v.type === "var") {
-            // Show dropdown of variable names (exclude self)
-            const varNames = Object.keys((tips && tips.__variables__) || {}).filter(n => n !== v.name);
-            valueInput = (
-              <select value={v.value} onChange={e => setVar(idx, "value", e.target.value)}>
-                <option value="">Select variable</option>
-                {varNames.map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            );
-          } else if (v.type === "func") {
-            // Show dropdown of function names
-            const funcNames = Object.keys(tips || {}).filter(n => tips[n]?.kind === "function");
-            valueInput = (
-              <select value={v.value} onChange={e => setVar(idx, "value", e.target.value)}>
-                <option value="">Select function</option>
-                {funcNames.map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            );
-          } else {
-            valueInput = (
-              <input
-                value={v.value}
-                onChange={e => setVar(idx, "value", e.target.value)}
-                placeholder="Value"
-              />
-            );
-          }
-          return (
-            <div key={idx} style={{ display: "flex", gap: 6, marginBottom: 4 }}>
-              <input
-                value={v.name}
-                onChange={e => setVar(idx, "name", e.target.value)}
-                placeholder="Name"
-              />
-              <select
-                value={v.type}
-                onChange={e => setVar(idx, "type", e.target.value)}
+      <div className="ds-card" style={{ padding: 16 }}>
+        <h4 className="ds-heading">Variables</h4>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {vars.map((v, idx) => {
+            let valueInput = null;
+
+            if (v.type === "var") {
+              const varNames = Object.keys((tips && tips.__variables__) || {}).filter(
+                (n) => n !== v.name
+              );
+              valueInput = (
+                <select
+                  className="ds-input form-select"
+                  value={v.value}
+                  onChange={(e) => setVar(idx, "value", e.target.value)}
+                >
+                  <option value="">Select variable</option>
+                  {varNames.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              );
+            } else if (v.type === "func") {
+              const userFuncs = Object.keys((tips && tips.__functions__) || {});
+              const petexFuncs = Object.keys(tips || {}).filter(
+                (n) => tips[n]?.kind === "function"
+              );
+              const funcNames = Array.from(new Set([...userFuncs, ...petexFuncs]));
+              valueInput = (
+                <select
+                  className="ds-input form-select"
+                  value={v.value}
+                  onChange={(e) => setVar(idx, "value", e.target.value)}
+                >
+                  <option value="">Select function</option>
+                  {funcNames.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              );
+            } else {
+              valueInput = (
+                <input
+                  className="ds-input"
+                  value={v.value}
+                  onChange={(e) => setVar(idx, "value", e.target.value)}
+                  placeholder="Value"
+                />
+              );
+            }
+
+            return (
+              <div
+                key={idx}
+                style={{ display: "flex", gap: 6, alignItems: "center" }}
               >
-                {TYPE_OPTIONS.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-              {valueInput}
-              <button onClick={() => removeVar(idx)}>🗑️</button>
-            </div>
-          );
-        })}
-        <button onClick={addVar}>+ Add variable</button>
-        <button onClick={handleSave}>Save</button>
+                <input
+                  className="ds-input"
+                  value={v.name}
+                  onChange={(e) => setVar(idx, "name", e.target.value)}
+                  placeholder="Name"
+                />
+                <select
+                  className="ds-input form-select"
+                  value={v.type}
+                  onChange={(e) => setVar(idx, "type", e.target.value)}
+                >
+                  {TYPE_OPTIONS.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+                {valueInput}
+                <button
+                  className="btn-danger-outline"
+                  onClick={() => removeVar(idx)}
+                  title="Delete variable"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+          <button className="btn-ghost" onClick={addVar}>
+            <Plus size={16} /> Add variable
+          </button>
+          <button className="btn-brand" onClick={handleSave}>
+            Save
+          </button>
+        </div>
       </div>
     );
   }
 
-  // Different editors based on cell type
+  // 🔹 Function Cell Editor
   if (node.type === "function") {
     const params = data.params || [];
+
     const setParam = (idx, key, val) => {
       const np = params.map((p, i) => (i === idx ? { ...p, [key]: val } : p));
       update("params", np);
@@ -138,22 +187,25 @@ export default function PropertyEditor({ node, onSave }) {
     };
 
     return (
-      <div>
-        <label>Function name</label>
+      <div className="ds-card" style={{ padding: 16 }}>
+        <label className="ds-heading">Function name</label>
         <input
+          className="ds-input"
           value={data.name || ""}
           onChange={(e) => update("name", e.target.value)}
         />
 
-        <h4>Parameters</h4>
+        <h4 className="ds-heading" style={{ marginTop: 12 }}>Parameters</h4>
         {params.map((p, idx) => (
-          <div key={idx} style={{ display: "flex", gap: 6 }}>
+          <div key={idx} style={{ display: "flex", gap: 6, marginBottom: 4 }}>
             <input
+              className="ds-input"
               value={p.name}
               onChange={(e) => setParam(idx, "name", e.target.value)}
               placeholder="Name"
             />
             <select
+              className="ds-input form-select"
               value={p.type}
               onChange={(e) => setParam(idx, "type", e.target.value)}
             >
@@ -162,73 +214,94 @@ export default function PropertyEditor({ node, onSave }) {
               ))}
             </select>
             <input
+              className="ds-input"
               value={p.default}
               onChange={(e) => setParam(idx, "default", e.target.value)}
               placeholder="Default"
             />
-            <button onClick={() => removeParam(idx)}>🗑️</button>
+            <button
+              className="btn-danger-outline"
+              onClick={() => removeParam(idx)}
+              title="Remove param"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
         ))}
+        <button className="btn-ghost" onClick={addParam}>
+          <Plus size={16} /> Add parameter
+        </button>
 
-        <button onClick={addParam}>+ Add parameter</button>
-
-        <div style={{ marginTop: 8 }}>
-          <label>Body</label>
+        <div style={{ marginTop: 12 }}>
+          <label className="ds-heading">Body</label>
           <Editor
             height="200px"
             defaultLanguage="python"
             value={data.body || ""}
             onChange={(val) => update("body", val)}
+            theme={mode === "dark" ? "vs-dark" : "light"}
           />
         </div>
 
-        <button onClick={handleSave}>Save</button>
+        <div style={{ marginTop: 12 }}>
+          <button className="btn-brand" onClick={handleSave}>
+            Save
+          </button>
+        </div>
       </div>
     );
   }
 
-
-  // Other cell types stay with inputs
+  // 🔹 Loop Editor
   if (node.type === "loop") {
     return (
-      <div>
-        <label>Index var</label>
+      <div className="ds-card" style={{ padding: 16 }}>
+        <label className="ds-heading">Index var</label>
         <input
+          className="ds-input"
           value={data.indexVar || "i"}
           onChange={(e) => update("indexVar", e.target.value)}
         />
-        <label>Count</label>
+        <label className="ds-heading">Count</label>
         <input
+          className="ds-input"
           type="number"
           value={data.count || 5}
           onChange={(e) => update("count", Number(e.target.value))}
         />
-        <div>
-          <label>Body</label>
+        <div style={{ marginTop: 12 }}>
+          <label className="ds-heading">Body</label>
           <Editor
             height="200px"
             defaultLanguage="python"
             value={data.body || ""}
             onChange={(val) => update("body", val)}
+            theme={mode === "dark" ? "vs-dark" : "light"}
           />
         </div>
-        <button onClick={handleSave}>Save</button>
+        <div style={{ marginTop: 12 }}>
+          <button className="btn-brand" onClick={handleSave}>Save</button>
+        </div>
       </div>
     );
   }
 
+  // 🔹 Condition Editor
   if (node.type === "condition") {
     return (
-      <div>
-        <label>Condition</label>
+      <div className="ds-card" style={{ padding: 16 }}>
+        <label className="ds-heading">Condition</label>
         <input
+          className="ds-input"
           value={data.condition || "True"}
           onChange={(e) => update("condition", e.target.value)}
         />
-        <button onClick={handleSave}>Save</button>
+        <div style={{ marginTop: 12 }}>
+          <button className="btn-brand" onClick={handleSave}>Save</button>
+        </div>
       </div>
     );
   }
 
-
+  return null;
 }

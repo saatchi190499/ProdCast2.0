@@ -17,7 +17,8 @@ export function PetexTipsProvider({ children }) {
       ]);
 
       const petexTips = petexRes.data || {};
-      const userVars = varsRes.data || {};
+      const userVars = varsRes.data?.variables || {};
+      const userFuncs = varsRes.data?.functions || {};
 
       const variableEntries = {};
       Object.entries(userVars).forEach(([name, info]) => {
@@ -28,9 +29,19 @@ export function PetexTipsProvider({ children }) {
         };
       });
 
+      const functionEntries = {};
+      Object.entries(userFuncs).forEach(([name, info]) => {
+        functionEntries[name] = {
+          kind: "function",
+          signature: info.signature || name + '()',
+          doc: info.doc || '',
+        };
+      });
+
       setTips({
         ...petexTips,
         __variables__: { ...variableEntries },
+        __functions__: { ...functionEntries },
       });
     } finally {
       setLoading(false);
