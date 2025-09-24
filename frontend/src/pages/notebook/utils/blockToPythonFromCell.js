@@ -1,31 +1,31 @@
 export function blockToPythonFromCell(cell) {
   switch (cell.type) {
     case "variable":
-      if (!cell.metadata?.variables) return "";
-      return cell.metadata.variables
+      return (cell.metadata?.variables || [])
         .map((v) => {
           const name = v.name || "var";
           let value;
+
           if (v.type === "var" || v.type === "func") {
-            value = v.value || "None"; // assign by reference
+            value = v.value || "None"; // reference
           } else if (v.type === "int") {
-            value = parseInt(v.value || 0, 10);
+            value = String(parseInt(v.value ?? 0, 10));
           } else if (v.type === "float") {
-            value = parseFloat(v.value || 0);
+            value = String(parseFloat(v.value ?? 0));
           } else if (v.type === "bool") {
-            value = v.value === "true" || v.value === true ? "True" : "False";
+            value = (v.value === "true" || v.value === true) ? "True" : "False";
           } else if (v.type === "str") {
-            let safe = String(v.value).replace(/\\/g, "/");
-            if (safe.startsWith('"') && safe.endsWith('"')) {
-              safe = safe.slice(1, -1);
-            }
-            value = `"${safe}"`;
+            // if already quoted, keep it; else JSON.stringify to escape correctly
+            const s = String(v.value ?? "");
+            value = (/^(['"]).*\1$/).test(s) ? s : JSON.stringify(s);
           } else {
-            value = JSON.stringify(v.value);
+            value = String(v.value ?? "None");
           }
+
           return `${name} = ${value}`;
         })
         .join("\n");
+
 
     case "function":
       if (!cell.metadata) return "";

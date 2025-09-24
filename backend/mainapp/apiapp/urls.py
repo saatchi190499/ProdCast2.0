@@ -17,7 +17,7 @@ from rest_framework.routers import DefaultRouter
 
 
 router = DefaultRouter()
-router.register(r"workflows", WorkflowViewSet, basename="workflow")
+router.register(r"components/workflows", WorkflowViewSet, basename="workflow")
 
 urlpatterns = [
     
@@ -37,7 +37,7 @@ urlpatterns = [
     path("components/", ScenarioComponentCreateView.as_view(), name="components-create"),
     path("components/<int:pk>/", ScenarioComponentDetailView.as_view()),
     path("components/events/<int:component_id>", EventRecordsView.as_view()),
-    path("components/", include(router.urls)),
+    path("", include(router.urls)),
 
     path("object-metadata/", ObjectMetadataView.as_view()),
     path("object-instances/", ObjectInstanceListView.as_view(), name="object-instances"),

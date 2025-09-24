@@ -3,28 +3,137 @@ from ..models import  Workflow
 from ..serializers import WorkflowSerializer
 
 from rest_framework import viewsets
-from django.core.files.base import ContentFile
+from ..models import  workflow_code_path
+from django.conf import settings
+from ..utils.notebook_export import block_to_python
+from ..utils.notebook_import import python_to_block
+
+from pathlib import Path
+import nbformat
+from rest_framework.decorators import action
+import os
 from datetime import datetime
-from ..utils.notebook_export import block_to_python_from_cells, cells_to_ipynb
+
+def workflow_version_path(workflow, ext="py"):
+    """
+    Build a versioned path like workflows/12/12_2025-09-23T17-45-01.py
+    """
+    ts = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    return os.path.join("workflows", str(workflow.id), f"{workflow.id}_{ts}.{ext}")
 
 class WorkflowViewSet(viewsets.ModelViewSet):
     queryset = Workflow.objects.all()
     serializer_class = WorkflowSerializer
 
+    # list available versions
+    @action(detail=True, methods=["get"])
+    def versions(self, request, pk=None):
+        workflow = self.get_object()
+        base_path = Path(settings.MEDIA_ROOT) / "workflows" / str(workflow.id)
+        versions = sorted({f.stem.split("_")[-1] for f in base_path.glob(f"{workflow.id}_*.py")})
+        return Response({"versions": versions})
+
+
+    # register → keep only this version
+    @action(detail=True, methods=["post"])
+    def register_version(self, request, pk=None):
+        workflow = self.get_object()
+        ts = request.data.get("timestamp")
+        base_dir = Path(settings.MEDIA_ROOT) / "workflows" / str(workflow.id)
+        keep_py = base_dir / f"{workflow.id}_{ts}.py"
+        keep_ipynb = base_dir / f"{workflow.id}_{ts}.ipynb"
+
+        # clean old versions
+        for f in base_dir.glob(f"{workflow.id}_*.*"):
+            if f.stem != f"{workflow.id}_{ts}":
+                try: f.unlink()
+                except Exception: pass
+
+        # update workflow pointers
+        workflow.code_file.name = str(keep_py.relative_to(settings.MEDIA_ROOT))
+        workflow.ipynb_file.name = str(keep_ipynb.relative_to(settings.MEDIA_ROOT))
+        workflow.save()
+
+        return Response({"status": "registered", "timestamp": ts})
+
+    @action(detail=True, methods=["get"])
+    def load_version(self, request, pk=None):
+        workflow = self.get_object()
+        ts = request.query_params.get("timestamp")
+
+        # build version path
+        base_path = Path(settings.MEDIA_ROOT) / "workflows" / str(workflow.id)
+        ipynb_path = base_path / f"{workflow.id}_{ts}.ipynb"
+
+        if not ipynb_path.exists():
+            return Response({"error": "Version not found"}, status=404)
+
+        nb = nbformat.read(ipynb_path, as_version=4)
+
+        cells = []
+        for c in nb.cells:
+            if c.cell_type == "code":
+                src = "".join(c.source)
+                block = python_to_block(src)   # ✅ convert Python → cell
+                cells.append(block)
+
+        return Response({"cells": cells})
+    
+    @action(detail=True, methods=["post"])
+    def register_notebook(self, request, pk=None):
+        workflow = self.get_object()
+        timestamp = request.data.get("timestamp")
+        if not timestamp:
+            return Response({"error": "timestamp required"}, status=400)
+
+        base_path = Path(settings.MEDIA_ROOT) / "workflows" / str(workflow.id)
+        py_path = base_path / f"{workflow.id}_{timestamp}.py"
+        ipynb_path = base_path / f"{workflow.id}_{timestamp}.ipynb"
+
+        if not py_path.exists() or not ipynb_path.exists():
+            return Response({"error": "Version not found"}, status=404)
+
+        # ✅ Register these as active
+        workflow.code_file.name = str(py_path.relative_to(Path(settings.MEDIA_ROOT)))
+        workflow.ipynb_file.name = str(ipynb_path.relative_to(Path(settings.MEDIA_ROOT)))
+        workflow.save()
+
+        # ✅ Delete old ones except current
+        for f in base_path.glob(f"{workflow.id}_*.*"):
+            if f.stem not in {py_path.stem, ipynb_path.stem}:
+                try:
+                    f.unlink()
+                except Exception:
+                    pass
+
+        return Response({
+            "message": "Notebook registered",
+            "py_file": workflow.code_file.url,
+            "ipynb_file": workflow.ipynb_file.url,
+        })
+
     def perform_update(self, serializer):
-        instance = serializer.save()
+        workflow = serializer.save()
 
-        # export .py
-        code = block_to_python_from_cells(instance.cells)
-        py_name = f"workflow_{instance.component.id}_{datetime.now():%Y%m%d_%H%M%S}.py"
-        instance.code_file.save(py_name, ContentFile(code))
+        code_lines = []
+        nb = nbformat.v4.new_notebook()
 
-        # export .ipynb
-        ipynb = cells_to_ipynb(instance.cells)
-        ipynb_name = f"workflow_{instance.component.id}_{datetime.now():%Y%m%d_%H%M%S}.ipynb"
-        instance.ipynb_file.save(ipynb_name, ContentFile(ipynb.encode("utf-8")))
+        for cell in workflow.cells:
+            src = block_to_python(cell)
+            code_lines.append(src)
+            nb.cells.append(nbformat.v4.new_code_cell(src))
 
-        instance.save()
+        code_text = "\n\n".join(code_lines)
+
+        py_path = Path(settings.MEDIA_ROOT) / workflow_version_path(workflow, "py")
+        py_path.parent.mkdir(parents=True, exist_ok=True)
+        py_path.write_text(code_text, encoding="utf-8")
+
+        ipynb_path = Path(settings.MEDIA_ROOT) / workflow_version_path(workflow, "ipynb")
+        with ipynb_path.open("w", encoding="utf-8") as f:
+            nbformat.write(nb, f)   
+
+
 
 ##########################################################################
 

@@ -7,14 +7,19 @@ import { blockToPythonFromCell } from "./utils/blockToPythonFromCell";
 import { usePetexTips } from "./context/PetexTipsContext";
 import { useMonaco } from "@monaco-editor/react";
 import { useParams } from "react-router-dom";
-import { registerPythonProviders } from "./utils/registerPythonProviders"; import {
+import { registerPythonProviders } from "./utils/registerPythonProviders";
+import {
   ArrowUp,
   ArrowDown,
   Trash2,
   Play,
   Edit3,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Save,
+  CheckSquare,
+  RotateCcw,
+  StepForward
 } from "lucide-react";
 
 
@@ -28,6 +33,9 @@ export default function NotebookEditor() {
   const { tips, refreshTips, deleteVar, addOrUpdateVar } = usePetexTips();
   const monaco = useMonaco();
   const { id } = useParams(); // workflow id from route
+  const [versions, setVersions] = useState([]);
+  const [selectedVersion, setSelectedVersion] = useState("");
+  const [activeVersion, setActiveVersion] = useState("");
 
   useEffect(() => {
     if (id) {
@@ -36,6 +44,8 @@ export default function NotebookEditor() {
           setCells(res.data.cells || []);
         })
         .catch((err) => console.error("Failed to load workflow", err));
+
+      loadVersions()
     }
   }, [id]);
 
@@ -43,12 +53,54 @@ export default function NotebookEditor() {
   const saveNotebook = async () => {
     try {
       await api.patch(`/components/workflows/${id}/`, { cells });
+      loadVersions()
       alert("✅ Notebook saved successfully!");
     } catch (err) {
       console.error("Failed to save workflow", err);
       alert("❌ Failed to save notebook");
     }
   };
+
+
+  const loadVersions = async () => {
+    try {
+      const res = await api.get(`/components/workflows/${id}/versions/`);
+      setVersions(res.data.versions || []);
+      setActiveVersion(res.data.active || "");
+    } catch (err) {
+      console.error("Failed to load versions", err);
+    }
+  };
+
+  const handleVersionChange = async (e) => {
+    const ts = e.target.value;
+    setSelectedVersion(ts);
+    if (!ts) return;
+
+    try {
+      const res = await api.get(`/components/workflows/${id}/load_version/`, {
+        params: { timestamp: ts },
+      });
+      setCells(res.data.cells || []);
+    } catch (err) {
+      console.error("Failed to load version", err);
+    }
+  };
+
+  const registerVersion = async () => {
+    if (!selectedVersion) return;
+    try {
+      await api.post(`/components/workflows/${id}/register_notebook/`, {
+        timestamp: selectedVersion,
+      });
+      alert("✅ Version registered!");
+      loadVersions();
+    } catch (err) {
+      console.error("Failed to register version", err);
+      alert("❌ Failed to register version");
+    }
+  };
+
   // 🔹 Centralized provider registration
   useEffect(() => {
     if (monaco && tips) {
@@ -193,38 +245,69 @@ export default function NotebookEditor() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <div className="card" style={{ height: "95vh", display: "flex", flexDirection: "column" }}>
       {/* 🔹 Toolbar pinned */}
       <div
+        className="card-header d-flex align-items-center gap-2"
         style={{
           flex: "0 0 auto",
-          display: "flex",
-          gap: 8,
-          padding: "10px 16px",
           borderBottom: "1px solid var(--brand-outline)",
           background: "var(--brand-50a)",
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
         }}
       >
-        <button className="btn-brand" onClick={resetKernel}>⟲ Reset Kernel</button>
-        <button className="btn-brand-outline" onClick={runStep} disabled={isRunning}>
-          ▶ Step ({Math.min(stepIdx + 1, cells.length)}/{cells.length || 0})
+        <button className="btn-brand d-flex align-items-center gap-1" onClick={resetKernel}>
+          <RotateCcw size={16} /> <span>Reset</span>
         </button>
-        <button className="btn-brand" onClick={runAll} disabled={isRunning}>⏭ Run All</button>
-        <button className="btn-brand" onClick={saveNotebook}>💾 Save Notebook</button>
+
+        <button
+          className="btn-brand-outline d-flex align-items-center gap-1"
+          onClick={runStep}
+          disabled={isRunning}
+        >
+          <StepForward size={16} />
+          <span>Step ({Math.min(stepIdx + 1, cells.length)}/{cells.length || 0})</span>
+        </button>
+
+        <button
+          className="btn-brand d-flex align-items-center gap-1"
+          onClick={runAll}
+          disabled={isRunning}
+        >
+          <Play size={16} /> <span>Run All</span>
+        </button>
+
+        <button className="btn-brand d-flex align-items-center gap-1" onClick={saveNotebook}>
+          <Save size={16} /> <span>Save</span>
+        </button>
+
+        <select
+          className="form-select"
+          value={selectedVersion}
+          onChange={handleVersionChange}
+          style={{ maxWidth: 220 }}
+        >
+          <option value="">-- Select version --</option>
+          {versions.map((v) => (
+            <option key={v} value={v}>
+              {v} {v === activeVersion ? " (active)" : ""}
+            </option>
+          ))}
+        </select>
+
+        <button className="btn-brand-outline d-flex align-items-center gap-1" onClick={registerVersion}>
+          <CheckSquare size={16} /> <span>Register</span>
+        </button>
       </div>
 
       {/* 🔹 Scrollable notebook area */}
       <div
-        className="brand-scroll"
+        className="card-body brand-scroll"
         style={{
           flex: "1 1 auto",
           overflowY: "auto",
           padding: 16,
-          background: "var(--bs-body-bg)",   // ✅ auto light/dark
-          color: "var(--bs-body-color)",     // ✅ text adapts
+          background: "var(--bs-body-bg)",  // ✅ auto light/dark
+          color: "var(--bs-body-color)",
         }}
       >
         {/* Empty notebook message */}

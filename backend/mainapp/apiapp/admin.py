@@ -229,14 +229,9 @@ class MainClassAdmin(admin.ModelAdmin):
     )
 
 from django.contrib import admin
-from .models import Workflow
-
-
-from django.contrib import admin
 from django.utils.html import format_html
-from django.urls import reverse
 from .models import Workflow
-
+from django.utils.safestring import mark_safe
 
 @admin.register(Workflow)
 class WorkflowAdmin(admin.ModelAdmin):
@@ -246,31 +241,54 @@ class WorkflowAdmin(admin.ModelAdmin):
         "updated_at",
         "code_link",
         "ipynb_link",
+        "short_cells_preview",
     )
     search_fields = ("component__name",)
     readonly_fields = ("updated_at", "code_file", "ipynb_file", "preview_cells")
 
+    # --- File download links ---
     def code_link(self, obj):
         if obj.code_file:
-            return format_html('<a href="{}" download>📄 Download .py</a>', obj.code_file.url)
-        return "-"
-    code_link.short_description = "Python file"
+            return format_html(
+                '<a href="{}" download class="button">📄 Download .py</a>',
+                obj.code_file.url
+            )
+        return "—"
+    code_link.short_description = "Python File"
 
     def ipynb_link(self, obj):
         if obj.ipynb_file:
-            return format_html('<a href="{}" download>📘 Download .ipynb</a>', obj.ipynb_file.url)
-        return "-"
-    ipynb_link.short_description = "Jupyter file"
+            return format_html(
+                '<a href="{}" download class="button">📘 Download .ipynb</a>',
+                obj.ipynb_file.url
+            )
+        return "—"
+    ipynb_link.short_description = "Notebook File"
+
+    # --- Preview cells in detail page ---
+   
 
     def preview_cells(self, obj):
         if not obj.cells:
             return "(empty)"
-        # show first few cells as preview
-        html = "<ul>"
+        html = "<ul style='margin:0;padding-left:16px;'>"
         for c in obj.cells[:5]:
-            label = c.get("type", "unknown")
-            code = c.get("source") or str(c.get("metadata", ""))[:50]
-            html += f"<li><b>{label}</b>: {code}</li>"
+            label = c.get("label") or c.get("type", "unknown").title()
+            code = c.get("source") or str(c.get("metadata", ""))[:60]
+            html += f"<li><b>{label}</b>: <code>{code}</code></li>"
+        if len(obj.cells) > 5:
+            html += f"<li>… {len(obj.cells) - 5} more cells</li>"
         html += "</ul>"
-        return format_html(html)
+        return mark_safe(html)
     preview_cells.short_description = "Cells Preview"
+
+    # --- Shorter preview for list view ---
+    def short_cells_preview(self, obj):
+        if not obj.cells:
+            return "—"
+        first = obj.cells[0]
+        label = first.get("label") or first.get("type", "unknown").title()
+        code = first.get("source") or str(first.get("metadata", ""))[:30]
+        return f"{label}: {code}"
+    short_cells_preview.short_description = "First Cell"
+
