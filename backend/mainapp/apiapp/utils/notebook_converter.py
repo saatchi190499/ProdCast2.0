@@ -1,7 +1,39 @@
+import json
+
 import re
 import uuid
 
 LABEL_RE = re.compile(r"^#\s*(.+?)\s+Cell\s*$", re.IGNORECASE)
+
+
+def block_to_python(cell):
+    t = cell.get("type")
+    label = (cell.get("label") or t.title()).strip()
+
+    # remove duplicate "Cell" if user added manually
+    if not label.lower().endswith("cell"):
+        label = f"{label} Cell"
+
+    if t == "variable":
+        body = "\n".join(f"{v['name']} = {v['value']}" for v in cell["metadata"].get("variables", []))
+        return f"# {label}\n{body}"
+
+    if t == "function":
+        params = ", ".join(p["name"] for p in cell["metadata"].get("params", []))
+        body = cell["metadata"].get("body", "pass")
+        return f"# {label}\ndef {cell['metadata'].get('name','func')}({params}):\n    {body}"
+
+    if t == "loop":
+        return f"# {label}\nfor {cell['metadata'].get('indexVar','i')} in range({cell['metadata'].get('count',5)}):\n    {cell['metadata'].get('body','pass')}"
+
+    if t == "condition":
+        return f"# {label}\nif {cell['metadata'].get('condition','True')}:\n    pass"
+
+    if t == "code":
+        return f"# {label}\n{cell.get('source','')}"
+
+    return "# Unknown cell type"
+
 
 def _strip_first_indent_block(src: str) -> str:
     lines = src.splitlines()

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import NotebookCell from "./NotebookCell";
 import PropertyEditor from "./PropertyEditor";
-import api from "../../utils/axiosInstance";
+import api, { localApi } from "../../utils/axiosInstance";
 import { blockToPythonFromCell } from "./utils/blockToPythonFromCell";
 import { usePetexTips } from "./context/PetexTipsContext";
 import { useMonaco } from "@monaco-editor/react";
@@ -38,22 +38,29 @@ export default function NotebookEditor() {
   const [activeVersion, setActiveVersion] = useState("");
 
   useEffect(() => {
-    if (id) {
-      api.get(`/components/workflows/${id}/`)
-        .then((res) => {
-          setCells(res.data.cells || []);
-        })
-        .catch((err) => console.error("Failed to load workflow", err));
-
-      loadVersions()
-    }
+    if (!id) return;
+    api.get(`/components/workflows/${id}/`)
+      .then(res => setCells(res.data.cells || []))
+      .catch(err => console.error("Failed to load workflow", err));
+    loadVersions();
   }, [id]);
 
-  // 🔹 Save workflow
+  const loadVersions = async () => {
+  try {
+    const res = await api.get(`/components/workflows/${id}/versions/`);
+    console.log("versions response:", res.data);   // 👀 check here
+    setVersions(res.data.versions || []);
+    setActiveVersion(res.data.active || "");
+  } catch (err) {
+    console.error("Failed to load versions", err);
+  }
+};
+
+
   const saveNotebook = async () => {
     try {
       await api.patch(`/components/workflows/${id}/`, { cells });
-      loadVersions()
+      await loadVersions();
       alert("✅ Notebook saved successfully!");
     } catch (err) {
       console.error("Failed to save workflow", err);
@@ -61,22 +68,10 @@ export default function NotebookEditor() {
     }
   };
 
-
-  const loadVersions = async () => {
-    try {
-      const res = await api.get(`/components/workflows/${id}/versions/`);
-      setVersions(res.data.versions || []);
-      setActiveVersion(res.data.active || "");
-    } catch (err) {
-      console.error("Failed to load versions", err);
-    }
-  };
-
   const handleVersionChange = async (e) => {
     const ts = e.target.value;
     setSelectedVersion(ts);
     if (!ts) return;
-
     try {
       const res = await api.get(`/components/workflows/${id}/load_version/`, {
         params: { timestamp: ts },
@@ -90,16 +85,17 @@ export default function NotebookEditor() {
   const registerVersion = async () => {
     if (!selectedVersion) return;
     try {
-      await api.post(`/components/workflows/${id}/register_notebook/`, {
+      await api.post(`/components/workflows/${id}/register_version/`, {
         timestamp: selectedVersion,
       });
       alert("✅ Version registered!");
-      loadVersions();
+      await loadVersions();
     } catch (err) {
       console.error("Failed to register version", err);
       alert("❌ Failed to register version");
     }
   };
+
 
   // 🔹 Centralized provider registration
   useEffect(() => {
@@ -166,13 +162,10 @@ export default function NotebookEditor() {
   const moveCellUp = (idx) => idx > 0 && reorderCells(idx, idx - 1);
   const moveCellDown = (idx) => idx < cells.length - 1 && reorderCells(idx, idx + 1);
 
-
-
-
   const runOne = async (cell) => {
     const code = blockToPythonFromCell(cell);
     try {
-      const res = await api.post("/run_cell/", { code });
+      const res = await localApi.post("/run_cell/", { code }); // 🔹 use localApi
       const { stdout, stderr, variables } = res.data;
 
       setOutputs((prev) => ({
@@ -231,7 +224,9 @@ export default function NotebookEditor() {
   };
 
   const resetKernel = async () => {
-    try { await api.post("/reset_context/"); } catch { /* ignore */ }
+    try {
+      await localApi.post("/reset_context/"); // 🔹 use localApi
+    } catch { /* ignore */ }
     setOutputs({});
     setStepIdx(0);
   };
@@ -281,10 +276,9 @@ export default function NotebookEditor() {
         </button>
 
         <select
-          className="form-select"
+          className="ds-input form-select"
           value={selectedVersion}
           onChange={handleVersionChange}
-          style={{ maxWidth: 220 }}
         >
           <option value="">-- Select version --</option>
           {versions.map((v) => (

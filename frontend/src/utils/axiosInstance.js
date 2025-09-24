@@ -1,11 +1,13 @@
 import axios from "axios";
 import { getAccessToken, getRefreshToken, saveTokens, logout } from "./auth";
-import API from "../links.jsx"
+import API from "../links.jsx";
+
+// --- Django API client (with JWT) ---
 const api = axios.create({
   baseURL: API,
 });
 
-// Добавляем access токен в каждый запрос
+// 🔹 Attach access token to every request
 api.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
@@ -15,7 +17,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Обрабатываем 401 и пытаемся обновить access токен
+// 🔹 Refresh token logic
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -37,7 +39,6 @@ api.interceptors.response.use(
           refresh: getRefreshToken(),
         });
 
-        // Повторяем оригинальный запрос с новым access токеном
         originalRequest.headers.Authorization = `Bearer ${res.data.access}`;
         return api(originalRequest);
       } catch (refreshError) {
@@ -49,5 +50,11 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// --- Local Agent client (no JWT needed) ---
+export const localApi = axios.create({
+  baseURL: "http://127.0.0.1:9000",
+  timeout: 10000,
+});
 
 export default api;
