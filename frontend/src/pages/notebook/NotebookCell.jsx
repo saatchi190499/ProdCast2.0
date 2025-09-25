@@ -1,5 +1,6 @@
 import Editor from "@monaco-editor/react";
 import { useTheme } from "../../context/ThemeContext";
+import { CheckCircle2, XCircle, Terminal, Loader2 } from "lucide-react";
 
 export default function NotebookCell({ cell, onChange, output }) {
   const { mode } = useTheme();
@@ -21,9 +22,21 @@ export default function NotebookCell({ cell, onChange, output }) {
 
       {output && (
         <div style={{ marginTop: 6 }}>
-          {output.stderr ? (
-            <div style={{ color: "red", fontWeight: 500 }}>
-              ❌ {output.stderr}
+          {output.loading ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--brand)" }}>
+              <Loader2 size={18} className="spin" /> Running…
+            </div>
+          ) : output.stderr ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                color: "var(--bs-danger-text)",
+                fontWeight: 500,
+              }}
+            >
+              <XCircle size={18} /> {output.stderr}
             </div>
           ) : output.stdout ? (
             <pre
@@ -32,19 +45,16 @@ export default function NotebookCell({ cell, onChange, output }) {
                 color: mode === "dark" ? "#0f0" : "#065f46",
                 padding: 6,
                 borderRadius: 6,
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 6,
               }}
             >
+              <Terminal size={16} style={{ marginTop: 2 }} />
               {output.stdout}
             </pre>
           ) : (
-            <span
-              style={{
-                color: mode === "dark" ? "var(--brand)" : "green",
-                fontWeight: 500,
-              }}
-            >
-              ✔️
-            </span>
+            <CheckCircle2 size={18} style={{ color: "var(--brand-800)" }} />
           )}
         </div>
       )}

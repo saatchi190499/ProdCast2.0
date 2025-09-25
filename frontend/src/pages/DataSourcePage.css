@@ -303,6 +303,16 @@ html[data-theme="forest"] {
   --brand-text-on: #fff;
 }
 
+.toolbar-item {
+  height: 38px;               /* match Bootstrap select height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;            /* balanced padding */
+  white-space: nowrap;        /* prevent text wrapping */
+}
+
+
 html[data-theme="violet"] {
   --brand: #8e44ad;
   --brand-700: #732d91;

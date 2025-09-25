@@ -19,7 +19,8 @@ import {
   Save,
   CheckSquare,
   RotateCcw,
-  StepForward
+  StepForward,
+  X, Plus, Code2, Variable, FunctionSquare, Repeat, GitCompare
 } from "lucide-react";
 
 
@@ -46,15 +47,15 @@ export default function NotebookEditor() {
   }, [id]);
 
   const loadVersions = async () => {
-  try {
-    const res = await api.get(`/components/workflows/${id}/versions/`);
-    console.log("versions response:", res.data);   // 👀 check here
-    setVersions(res.data.versions || []);
-    setActiveVersion(res.data.active || "");
-  } catch (err) {
-    console.error("Failed to load versions", err);
-  }
-};
+    try {
+      const res = await api.get(`/components/workflows/${id}/versions/`);
+      console.log("versions response:", res.data);   // 👀 check here
+      setVersions(res.data.versions || []);
+      setActiveVersion(res.data.active || "");
+    } catch (err) {
+      console.error("Failed to load versions", err);
+    }
+  };
 
 
   const saveNotebook = async () => {
@@ -164,13 +165,21 @@ export default function NotebookEditor() {
 
   const runOne = async (cell) => {
     const code = blockToPythonFromCell(cell);
+
+    // 🔹 mark cell as "loading"
+    setOutputs((prev) => ({
+      ...prev,
+      [cell.id]: { loading: true, code },
+    }));
+
     try {
-      const res = await localApi.post("/run_cell/", { code }); // 🔹 use localApi
+      const res = await localApi.post("/run_cell/", { code });
       const { stdout, stderr, variables } = res.data;
 
+      // 🔹 finished, update with result
       setOutputs((prev) => ({
         ...prev,
-        [cell.id]: { stdout, stderr, code },
+        [cell.id]: { stdout, stderr, code, loading: false },
       }));
 
       // 🔹 update context vars instantly
@@ -191,7 +200,7 @@ export default function NotebookEditor() {
     } catch (err) {
       setOutputs((prev) => ({
         ...prev,
-        [cell.id]: { stdout: "", stderr: String(err), code },
+        [cell.id]: { stdout: "", stderr: String(err), code, loading: false },
       }));
     }
   };
@@ -250,12 +259,12 @@ export default function NotebookEditor() {
           background: "var(--brand-50a)",
         }}
       >
-        <button className="btn-brand d-flex align-items-center gap-1" onClick={resetKernel}>
+        <button className="btn-brand toolbar-item gap-1" onClick={resetKernel}>
           <RotateCcw size={16} /> <span>Reset</span>
         </button>
 
         <button
-          className="btn-brand-outline d-flex align-items-center gap-1"
+          className="btn-brand-outline toolbar-item gap-1"
           onClick={runStep}
           disabled={isRunning}
         >
@@ -264,19 +273,19 @@ export default function NotebookEditor() {
         </button>
 
         <button
-          className="btn-brand d-flex align-items-center gap-1"
+          className="btn-brand toolbar-item gap-1"
           onClick={runAll}
           disabled={isRunning}
         >
           <Play size={16} /> <span>Run All</span>
         </button>
 
-        <button className="btn-brand d-flex align-items-center gap-1" onClick={saveNotebook}>
+        <button className="btn-brand toolbar-item gap-1" onClick={saveNotebook}>
           <Save size={16} /> <span>Save</span>
         </button>
 
         <select
-          className="ds-input form-select"
+          className="form-select toolbar-item"
           value={selectedVersion}
           onChange={handleVersionChange}
         >
@@ -288,10 +297,19 @@ export default function NotebookEditor() {
           ))}
         </select>
 
-        <button className="btn-brand-outline d-flex align-items-center gap-1" onClick={registerVersion}>
+        <button className="btn-brand-outline toolbar-item gap-1" onClick={registerVersion}>
           <CheckSquare size={16} /> <span>Register</span>
         </button>
+
+        <button
+          className="btn-danger-outline toolbar-item gap-1"
+          onClick={() => window.history.back()} // or navigate("/")
+        >
+          <X size={16} /> <span>Close</span>
+        </button>
       </div>
+
+
 
       {/* 🔹 Scrollable notebook area */}
       <div
@@ -312,11 +330,30 @@ export default function NotebookEditor() {
             </h3>
             <p style={{ marginBottom: 20 }}>Add your first cell:</p>
             <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-              <button className="btn-brand" onClick={() => setCells([createCell("code")])}>+ Code</button>
-              <button className="btn-brand" onClick={() => setCells([createCell("variable")])}>+ Variable</button>
-              <button className="btn-brand" onClick={() => setCells([createCell("function")])}>+ Function</button>
-              <button className="btn-brand" onClick={() => setCells([createCell("loop")])}>+ Loop</button>
-              <button className="btn-brand" onClick={() => setCells([createCell("condition")])}>+ Condition</button>
+              <button className="btn-brand d-flex align-items-center gap-1"
+                onClick={() => setCells([createCell("code")])}>
+                <Code2 size={16} /> <span>Code</span>
+              </button>
+
+              <button className="btn-brand d-flex align-items-center gap-1"
+                onClick={() => setCells([createCell("variable")])}>
+                <Variable size={16} /> <span>Variable</span>
+              </button>
+
+              <button className="btn-brand d-flex align-items-center gap-1"
+                onClick={() => setCells([createCell("function")])}>
+                <FunctionSquare size={16} /> <span>Function</span>
+              </button>
+
+              <button className="btn-brand d-flex align-items-center gap-1"
+                onClick={() => setCells([createCell("loop")])}>
+                <Repeat size={16} /> <span>Loop</span>
+              </button>
+
+              <button className="btn-brand d-flex align-items-center gap-1"
+                onClick={() => setCells([createCell("condition")])}>
+                <GitCompare size={16} /> <span>Condition</span>
+              </button>
             </div>
           </div>
         )}
@@ -464,12 +501,48 @@ export default function NotebookEditor() {
                   textAlign: "center",
                 }}
               >
-                <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                  <button className="btn-ghost" onClick={() => insertCell(idx + 1, "code")}>+ Code</button>
-                  <button className="btn-ghost" onClick={() => insertCell(idx + 1, "variable")}>+ Variable</button>
-                  <button className="btn-ghost" onClick={() => insertCell(idx + 1, "function")}>+ Function</button>
-                  <button className="btn-ghost" onClick={() => insertCell(idx + 1, "loop")}>+ Loop</button>
-                  <button className="btn-ghost" onClick={() => insertCell(idx + 1, "condition")}>+ Condition</button>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <button
+                    className="btn-ghost d-flex align-items-center gap-1"
+                    onClick={() => insertCell(idx + 1, "code")}
+                  >
+                    <Code2 size={16} /> <span>Code</span>
+                  </button>
+
+                  <button
+                    className="btn-ghost d-flex align-items-center gap-1"
+                    onClick={() => insertCell(idx + 1, "variable")}
+                  >
+                    <Variable size={16} /> <span>Variable</span>
+                  </button>
+
+                  <button
+                    className="btn-ghost d-flex align-items-center gap-1"
+                    onClick={() => insertCell(idx + 1, "function")}
+                  >
+                    <FunctionSquare size={16} /> <span>Function</span>
+                  </button>
+
+                  <button
+                    className="btn-ghost d-flex align-items-center gap-1"
+                    onClick={() => insertCell(idx + 1, "loop")}
+                  >
+                    <Repeat size={16} /> <span>Loop</span>
+                  </button>
+
+                  <button
+                    className="btn-ghost d-flex align-items-center gap-1"
+                    onClick={() => insertCell(idx + 1, "condition")}
+                  >
+                    <GitCompare size={16} /> <span>Condition</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -479,12 +552,48 @@ export default function NotebookEditor() {
         {/* Add cell menu at bottom */}
         {cells.length > 0 && (
           <div style={{ marginTop: 20, padding: 10, textAlign: "center" }}>
-            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-              <button className="btn-brand" onClick={() => setCells((prev) => [...prev, createCell("code")])}>+ Code</button>
-              <button className="btn-brand" onClick={() => setCells((prev) => [...prev, createCell("variable")])}>+ Variable</button>
-              <button className="btn-brand" onClick={() => setCells((prev) => [...prev, createCell("function")])}>+ Function</button>
-              <button className="btn-brand" onClick={() => setCells((prev) => [...prev, createCell("loop")])}>+ Loop</button>
-              <button className="btn-brand" onClick={() => setCells((prev) => [...prev, createCell("condition")])}>+ Condition</button>
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                className="btn-brand d-flex align-items-center gap-1"
+                onClick={() => setCells((prev) => [...prev, createCell("code")])}
+              >
+                <Code2 size={16} /> <span>Code</span>
+              </button>
+
+              <button
+                className="btn-brand d-flex align-items-center gap-1"
+                onClick={() => setCells((prev) => [...prev, createCell("variable")])}
+              >
+                <Variable size={16} /> <span>Variable</span>
+              </button>
+
+              <button
+                className="btn-brand d-flex align-items-center gap-1"
+                onClick={() => setCells((prev) => [...prev, createCell("function")])}
+              >
+                <FunctionSquare size={16} /> <span>Function</span>
+              </button>
+
+              <button
+                className="btn-brand d-flex align-items-center gap-1"
+                onClick={() => setCells((prev) => [...prev, createCell("loop")])}
+              >
+                <Repeat size={16} /> <span>Loop</span>
+              </button>
+
+              <button
+                className="btn-brand d-flex align-items-center gap-1"
+                onClick={() => setCells((prev) => [...prev, createCell("condition")])}
+              >
+                <GitCompare size={16} /> <span>Condition</span>
+              </button>
             </div>
           </div>
         )}
