@@ -10,7 +10,7 @@ import nbformat
 import os
 
 from ..models import Workflow, ScenarioComponent
-from ..serializers import WorkflowSerializer
+from ..serializers import WorkflowSerializer, WorkflowListSerializer
 from ..utils.notebook_converter import block_to_python, python_to_block  
 
 
@@ -33,7 +33,14 @@ class WorkflowViewSet(viewsets.ModelViewSet):
         component = get_object_or_404(ScenarioComponent, pk=component_id)
         workflow, _ = Workflow.objects.get_or_create(component=component)
         return workflow
-
+    
+    #list all workflows
+    @action(detail=False, methods=["get"], url_path="all")
+    def list_all(self, request):
+        workflows = Workflow.objects.select_related("component").all()
+        serializer = WorkflowListSerializer(workflows, many=True)
+        return Response(serializer.data)
+    
     # 🔹 List available versions
     @action(detail=True, methods=["get"], url_path="versions")
     def versions(self, request, component_id=None):

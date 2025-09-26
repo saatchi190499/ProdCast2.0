@@ -231,7 +231,7 @@ export default function ScenariosPage() {
   };
 
   return (
-    <Card className="ds-card p-4">
+    <div className="ds-card p-4">
       <div className="d-flex align-items-center mb-3 justify-content-between">
         <div className="d-flex align-items-center gap-3">
           <h4 className="ds-heading mb-0">Scenarios</h4>
@@ -393,6 +393,6 @@ export default function ScenariosPage() {
         currentUser={currentUser}
         onStarted={fetchScenarios}
       />
-    </Card>
+    </div>
   );
 }

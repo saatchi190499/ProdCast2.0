@@ -6,6 +6,7 @@ import ThemeSwitcher from "../components/ThemeSelect";
 import { useTranslation } from "react-i18next";
 import { Tabs, Tab, Container, Row, Col } from "react-bootstrap";
 import InstanceManagement from "./settings/InstanceManagement";
+import ServerManager from "./settings/ServerManagment";
 
 export default function Settings() {
   const { role } = useAuth();
@@ -44,6 +45,12 @@ export default function Settings() {
         {role === "admin" && (
           <Tab eventKey="instances" title={t("equip_management")}>
             <InstanceManagement />
+          </Tab>
+        )}
+
+        {role === "admin" && (
+          <Tab eventKey="servers" title={t("server_management")}>
+            <ServerManager />
           </Tab>
         )}
       </Tabs>

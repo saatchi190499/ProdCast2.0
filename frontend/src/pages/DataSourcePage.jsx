@@ -165,7 +165,7 @@ export default function DataSourcePage() {
 
   // --- render ---
   return (
-    <Card className="ds-card">
+    <div className="ds-card p-4">
       <Card.Body>
         {/* Modal for add component (hidden if OUTPUT) */}
         {sourceType !== "OUTPUT" && (
@@ -409,6 +409,6 @@ export default function DataSourcePage() {
           </div>
         )}
       </Card.Body>
-    </Card>
+    </div>
   );
 }

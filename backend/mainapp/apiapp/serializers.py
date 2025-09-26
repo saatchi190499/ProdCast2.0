@@ -2,26 +2,25 @@ from rest_framework import serializers
 from .models import (
     ScenarioClass, ServersClass, ScenarioComponent, ScenarioComponentLink,
     ObjectType, ObjectInstance, ObjectTypeProperty, DataSource, MainClass, ScenarioLog,
-    Workflow
+    Workflow, WorkflowSchedulerLog, WorkflowRun
 )
 import os
 from django.conf import settings
 
 # ---------- Servers ----------
-class ServersClassSerializer(serializers.ModelSerializer):
+class ServerSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServersClass
         fields = [
-            'server_id',
-            'server_name',
-            'server_url',
-            'server_status',
-            'description',
-            'created_by',
-            'created_date',
-            'is_active'
+            "server_id",
+            "server_name",
+            "server_url",
+            "server_status",
+            "is_active",
+            "allow_scenarios",
+            "allow_workflows",
+            "description",
         ]
-        read_only_fields = ['server_id', 'created_by', 'created_date']
 
 
 # ---------- ScenarioComponent ----------
@@ -201,3 +200,46 @@ class WorkflowSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workflow
         fields = "__all__"
+
+class WorkflowListSerializer(serializers.ModelSerializer):
+    component_name = serializers.CharField(source="component.name", read_only=True)
+
+    class Meta:
+        model = Workflow
+        fields = [
+            "id",
+            "component_id",
+            "component_name",
+        ]
+
+# apiapp/serializers/workflow_scheduler_serializer.py
+from rest_framework import serializers
+from .models import WorkflowScheduler
+
+class WorkflowSchedulerSerializer(serializers.ModelSerializer):
+    workflow_name = serializers.CharField(source="workflow.component.name", read_only=True)
+
+    class Meta:
+        model = WorkflowScheduler
+        fields = [
+            "id",
+            "workflow",
+            "workflow_name",
+            "cron_expression",
+            "next_run",
+            "last_run",
+            "is_active",
+            "created_date",
+        ]
+
+
+class WorkflowSchedulerLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkflowSchedulerLog
+        fields = ["id", "scheduler", "timestamp", "status", "message"]
+
+class WorkflowRunSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkflowRun
+        fields = ["id", "workflow", "scheduler", "task_id",
+                  "started_at", "finished_at", "status", "output", "error"]

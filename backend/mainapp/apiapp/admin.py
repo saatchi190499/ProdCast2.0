@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from .models import (
     UnitSystem, UnitType, UnitDefinition, UnitCategory, UnitSystemCategoryDefinition,
     DataSource, ScenarioComponent, ServersClass, ScenarioClass, ScenarioComponentLink,
-    ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, ScenarioLog
+    ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, ScenarioLog, WorkflowScheduler, WorkflowSchedulerLog
 )
 
 # --- New Unit System Models ---
@@ -292,3 +292,11 @@ class WorkflowAdmin(admin.ModelAdmin):
         return f"{label}: {code}"
     short_cells_preview.short_description = "First Cell"
 
+@admin.register(WorkflowScheduler)
+class WorkflowSchedulerAdmin(admin.ModelAdmin):
+    list_display = ("id", "workflow", "cron_expression", "is_active", "last_run", "next_run")
+
+@admin.register(WorkflowSchedulerLog)
+class WorkflowSchedulerLogAdmin(admin.ModelAdmin):
+    list_display = ("scheduler", "timestamp", "status", "message")
+    list_filter = ("status", "timestamp")

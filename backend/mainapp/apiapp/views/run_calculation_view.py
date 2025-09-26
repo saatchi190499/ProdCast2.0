@@ -6,7 +6,9 @@ from rest_framework.permissions import IsAuthenticated
 from ..models import ScenarioClass
 import os
 from rest_framework.decorators import api_view
-
+from croniter import croniter
+from django.utils import timezone
+from ..models import WorkflowScheduler, ServersClass, WorkflowSchedulerLog
 from django.http import JsonResponse
 # Функция для получения статуса задачи по её ID.
 import json
@@ -141,3 +143,37 @@ def workers_schedule_view(request):
         "workers": workers_status,
         **json.loads(scenarios_status.content.decode())  # объединяем
     })
+
+##################################Workflow#########################################
+def run_due_workflow_schedules():
+    now = timezone.now()
+    for sched in WorkflowScheduler.objects.filter(is_active=True, next_run__lte=now):
+        servers = ServersClass.objects.filter(is_active=True, allow_workflows=True)
+        if not servers.exists():
+            WorkflowSchedulerLog.objects.create(
+                scheduler=sched,
+                status="NO_SERVER",
+                message="❌ No servers available for workflows"
+            )
+            continue
+
+        try:
+            task = app.send_task("worker.run_workflow", args=[sched.workflow.id], queue="default")
+
+            sched.last_run = now
+            sched.next_run = croniter(sched.cron_expression, now).get_next(timezone.datetime)
+            sched.save()
+
+            WorkflowSchedulerLog.objects.create(
+                scheduler=sched,
+                status="QUEUED",
+                message=f"Task {task.id} queued for workflow {sched.workflow.id}"
+            )
+
+        except Exception as e:
+            WorkflowSchedulerLog.objects.create(
+                scheduler=sched,
+                status="ERROR",
+                message=f"Exception: {e}"
+            )
+        

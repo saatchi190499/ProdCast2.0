@@ -20,6 +20,7 @@ import {
   FiSettings,
   FiChevronRight,
   FiChevronDown,
+  FiClock
 } from "react-icons/fi";
 import { LuWorkflow } from "react-icons/lu";
 import api from "../utils/axiosInstance";
@@ -247,6 +248,13 @@ export default function MainLayout() {
             to="/scenarios"
             icon={<FiLayers />}
             label={t("scenarios")}
+            collapsed={collapsed}
+          />
+
+          <SidebarLink
+            to="/scheduler"
+            icon={<FiClock />}
+            label={t("scheduler")}
             collapsed={collapsed}
           />
 

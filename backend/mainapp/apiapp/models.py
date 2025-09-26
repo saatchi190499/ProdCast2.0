@@ -186,10 +186,14 @@ class ServersClass(models.Model):
     server_id = models.AutoField(primary_key=True)
     server_name = models.CharField(max_length=50, unique=True)
     server_url = models.CharField(max_length=250, unique=True)
-    server_status = models.CharField(max_length=50)
-    description = models.TextField("Description", blank=True)
+    server_status = models.CharField(max_length=50, blank=True)
 
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_servers")
+    # admin settings
+    allow_scenarios = models.BooleanField(default=True)
+    allow_workflows = models.BooleanField(default=True)
+
+    description = models.TextField("Description", blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 
@@ -199,19 +203,12 @@ class ServersClass(models.Model):
     def __str__(self):
         return self.server_name
 
-    def deactivate(self):
-        self.is_active = False
-        self.save()
-
-    def activate(self):
-        self.is_active = True
-        self.save()
-
     class Meta:
         db_table = 'apiapp_servers'
         verbose_name = "Server"
         verbose_name_plural = "Servers"
         ordering = ["-created_date"]
+
 
 
 # ---------- Scenario ----------
@@ -442,3 +439,71 @@ class Workflow(models.Model):
 
     def __str__(self):
         return f"Workflow for {self.component}"
+    
+class WorkflowScheduler(models.Model):
+    workflow = models.ForeignKey(
+        Workflow, on_delete=models.CASCADE, related_name="schedules"
+    )
+    cron_expression = models.CharField(
+        "Cron Expression", max_length=100,
+        help_text="E.g. '0 2 * * *' for daily at 2am"
+    )
+    next_run = models.DateTimeField(null=True, blank=True)
+    last_run = models.DateTimeField(null=True, blank=True)
+
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "apiapp_workflow_scheduler"
+        verbose_name = "Workflow Scheduler"
+        verbose_name_plural = "Workflow Schedulers"
+
+    def __str__(self):
+        return f"Schedule for {self.workflow.component.name} ({self.cron_expression})"
+    
+
+class WorkflowSchedulerLog(models.Model):
+    scheduler = models.ForeignKey(
+        "WorkflowScheduler",
+        on_delete=models.CASCADE,
+        related_name="logs"
+    )
+    timestamp = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=50)  # SUCCESS, ERROR, NO_SERVER, QUEUED
+    message = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = "apiapp_workflow_scheduler_log"
+        verbose_name = "Workflow Scheduler Log"
+        verbose_name_plural = "Workflow Scheduler Logs"
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"{self.scheduler.id} @ {self.timestamp} — {self.status}"
+    
+class WorkflowRun(models.Model):
+    workflow = models.ForeignKey("Workflow", on_delete=models.CASCADE, related_name="runs")
+    scheduler = models.ForeignKey(
+        "WorkflowScheduler",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="runs"
+    )
+    task_id = models.CharField(max_length=255, null=True, blank=True)  # Celery task ID
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=50, default="QUEUED")  # QUEUED, SUCCESS, ERROR
+    output = models.TextField(blank=True, null=True)   # stdout
+    error = models.TextField(blank=True, null=True)    # stderr
+
+    class Meta:
+        db_table = "apiapp_workflow_run"
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"Workflow {self.workflow_id} run @ {self.started_at} — {self.status}"
+
+

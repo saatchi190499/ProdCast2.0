@@ -92,7 +92,8 @@
     "failedLoadWorkers": "Failed to load workers",
     "nothingSelected": "Nothing selected",
     "processes": "Processes",
-    "equip_management": "Equipment Management"
+    "equip_management": "Equipment Management",
+    "scheduler": "Scheduler"
     
 
 }

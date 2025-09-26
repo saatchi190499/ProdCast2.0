@@ -7,6 +7,7 @@ import NotebookEditor from "../pages/notebook/NotebookEditor";
 import { PetexTipsProvider } from "../pages/notebook/context/PetexTipsContext";
 import DataSourcePage from "../pages/DataSourcePage";
 import Scenarios from "../pages/scenario/Scenarios";
+import Scheduler from "../pages/scheduler/WorkflowSchedulerPage";
 import { isAuthenticated } from "../utils/auth";
 import MainLayout from "../layouts/MainLayout";
 
@@ -44,6 +45,7 @@ export default function AppRouter() {
             }
           />
           <Route path="scenarios" element={<Scenarios />} />
+          <Route path="scheduler" element={<Scheduler />} />
           <Route path="settings" element={<Settings />} />
         </Route>
 
