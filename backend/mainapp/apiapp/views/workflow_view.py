@@ -167,8 +167,10 @@ from rest_framework.response import Response
 
 # preload Petex modules
 import petex_client.gap as gap
+import petex_client.gap_tools as gap_tools
 import petex_client.resolve as resolve
 from petex_client.server import PetexServer
+
 
 
 
@@ -204,6 +206,7 @@ def get_srv():
 # 🔹 Persistent global context (Jupyter-like kernel)
 GLOBAL_CONTEXT = {
     "gap": gap,
+    "gap_tools" : gap_tools,
     "resolve": resolve,
     "PetexServer": PetexServer,
     # note: srv injected dynamically per execution

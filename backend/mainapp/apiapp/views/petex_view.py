@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 # Import your Petex client wrappers
 import petex_client.gap as gap
+import petex_client.gap_tools as gap_tools
 import petex_client.resolve as resolve
 from petex_client.server import PetexServer
 
@@ -12,6 +13,7 @@ from petex_client.server import PetexServer
 def list_petex_functions(request):
     modules = {
         "gap": gap,
+        "gap_tools" : gap_tools,
         "resolve": resolve,
         "srv": PetexServer # auto-opened sessionF
     }

@@ -507,3 +507,14 @@ class WorkflowRun(models.Model):
         return f"Workflow {self.workflow_id} run @ {self.started_at} — {self.status}"
 
 
+class GapNetworkData(models.Model):
+    component = models.ForeignKey(
+        "ScenarioComponent",
+        on_delete=models.CASCADE,
+        related_name="gap_networks"
+    )
+    well_uid = models.CharField(max_length=100)
+    paths = models.JSONField()
+    branches = models.JSONField()
+    trunks = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
