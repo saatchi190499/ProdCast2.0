@@ -1,11 +1,12 @@
 # apiapp/admin.py
 
 from django.contrib import admin
-from django.contrib.auth.models import User
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from .models import (
     UnitSystem, UnitType, UnitDefinition, UnitCategory, UnitSystemCategoryDefinition,
     DataSource, ScenarioComponent, ServersClass, ScenarioClass, ScenarioComponentLink,
-    ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, ScenarioLog, WorkflowScheduler, WorkflowSchedulerLog
+    ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, ScenarioLog, Workflow, WorkflowScheduler, WorkflowSchedulerLog
 )
 
 # --- New Unit System Models ---
@@ -227,11 +228,6 @@ class MainClassAdmin(admin.ModelAdmin):
             'fields': ('description', 'tag')
         }),
     )
-
-from django.contrib import admin
-from django.utils.html import format_html
-from .models import Workflow
-from django.utils.safestring import mark_safe
 
 @admin.register(Workflow)
 class WorkflowAdmin(admin.ModelAdmin):

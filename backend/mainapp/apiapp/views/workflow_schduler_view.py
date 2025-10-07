@@ -1,13 +1,33 @@
 # apiapp/views/workflow_scheduler_view.py
+from rest_framework.response import Response
+from rest_framework import status
+from django.utils import timezone
+from rest_framework.decorators import action
+from mainapp.celery import app
 from rest_framework import viewsets
 from rest_framework.permissions import IsAdminUser
 from ..models import WorkflowScheduler, WorkflowSchedulerLog, WorkflowRun
 from ..serializers import WorkflowSchedulerSerializer, WorkflowSchedulerLogSerializer, WorkflowRunSerializer
 
 class WorkflowSchedulerViewSet(viewsets.ModelViewSet):
-    queryset = WorkflowScheduler.objects.all().order_by("-created_date")
+    queryset = WorkflowScheduler.objects.all()
     serializer_class = WorkflowSchedulerSerializer
-    permission_classes = [IsAdminUser]  # только админы управляют
+
+    @action(detail=True, methods=["post"], url_path="run_now")
+    def run_now(self, request, pk=None):
+        scheduler = self.get_object()
+        workflow = scheduler.workflow
+
+        task = app.send_task("worker.run_workflow", args=[workflow.id], queue="workflows")
+
+        WorkflowRun.objects.create(
+            workflow=workflow,
+            task_id=task.id,
+            status="QUEUED",
+            started_at=timezone.now(),
+        )
+
+        return Response({"status": "QUEUED", "task_id": task.id}, status=status.HTTP_200_OK)
 
 class WorkflowSchedulerLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = WorkflowSchedulerLogSerializer

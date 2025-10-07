@@ -325,3 +325,9 @@ html[data-theme="violet"] {
   --brand-focus: 0 0 0 0.25rem rgba(142, 68, 173, 0.35);
   --brand-text-on: #fff;
 }
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}

@@ -1,11 +1,20 @@
 from rest_framework import serializers
 from .models import (
-    ScenarioClass, ServersClass, ScenarioComponent, ScenarioComponentLink,
-    ObjectType, ObjectInstance, ObjectTypeProperty, DataSource, MainClass, ScenarioLog,
-    Workflow, WorkflowSchedulerLog, WorkflowRun
+    ScenarioClass,
+    ServersClass,
+    ScenarioComponent,
+    ScenarioComponentLink,
+    ObjectType,
+    ObjectInstance,
+    ObjectTypeProperty,
+    DataSource,
+    MainClass,
+    ScenarioLog,
+    Workflow,
+    WorkflowScheduler,
+    WorkflowSchedulerLog,
+    WorkflowRun,
 )
-import os
-from django.conf import settings
 
 # ---------- Servers ----------
 class ServerSerializer(serializers.ModelSerializer):
@@ -24,8 +33,6 @@ class ServerSerializer(serializers.ModelSerializer):
 
 
 # ---------- ScenarioComponent ----------
-from rest_framework import serializers
-from .models import ScenarioComponent, DataSource
 
 class ScenarioComponentSerializer(serializers.ModelSerializer):
     created_by = serializers.SlugRelatedField(
@@ -144,8 +151,6 @@ class DataSourceSerializer(serializers.ModelSerializer):
 
 
 # ---------- MainClass ----------
-from rest_framework import serializers
-from apiapp.models import MainClass, ObjectType, ObjectInstance, ObjectTypeProperty
 
 class MainClassSerializer(serializers.ModelSerializer):
     class Meta:
@@ -213,8 +218,6 @@ class WorkflowListSerializer(serializers.ModelSerializer):
         ]
 
 # apiapp/serializers/workflow_scheduler_serializer.py
-from rest_framework import serializers
-from .models import WorkflowScheduler
 
 class WorkflowSchedulerSerializer(serializers.ModelSerializer):
     workflow_name = serializers.CharField(source="workflow.component.name", read_only=True)

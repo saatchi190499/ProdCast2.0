@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "../../utils/axiosInstance";
-import { FiFileText, FiTrash2 } from "react-icons/fi";
+import { FiFileText, FiTrash2, FiPlay, FiClock, FiXCircle, FiLoader, FiCheckCircle } from "react-icons/fi";
+import Cron from "react-js-cron";
+import "react-js-cron/dist/styles.css"; // стандартные стили
+
 
 export default function WorkflowSchedulerPage() {
   const [schedulers, setSchedulers] = useState([]);
@@ -15,6 +18,35 @@ export default function WorkflowSchedulerPage() {
   const [showLogs, setShowLogs] = useState(false);
   const [activeScheduler, setActiveScheduler] = useState(null);
   const [activeRun, setActiveRun] = useState(null);
+
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "QUEUED":
+      case "PENDING":
+        return <FiClock className="text-warning me-1" />;
+      case "STARTED":
+        return <FiLoader className="text-primary me-1" style={{ animation: "spin 1s linear infinite" }} />;
+      case "SUCCESS":
+        return <FiCheckCircle className="text-success me-1" />;
+      case "FAILURE":
+      case "ERROR":
+        return <FiXCircle className="text-danger me-1" />;
+      default:
+        return <FiClock className="text-muted me-1" />;
+    }
+  };
+
+  const runNow = async (id) => {
+    try {
+      await api.post(`workflow-schedulers/${id}/run_now/`);
+      alert("Workflow scheduled to run now");
+      fetchSchedulers();
+    } catch (err) {
+      alert("Ошибка запуска расписания");
+      console.error(err);
+    }
+  };
 
   const fetchSchedulers = async () => {
     const res = await api.get("workflow-schedulers/");
@@ -94,7 +126,12 @@ export default function WorkflowSchedulerPage() {
             </select>
           </div>
           <div className="col-md-5">
-            {/* Cron UI (react-js-cron) */}
+            <Cron
+              value={form.cron_expression}
+              setValue={(val) => setForm({ ...form, cron_expression: val })}
+              clearButton={false}
+              leadingZero
+            />
           </div>
           <div className="col-md-3">
             <button type="submit" className="btn btn-brand w-100">
@@ -141,6 +178,14 @@ export default function WorkflowSchedulerPage() {
                       <FiFileText size={16} />
                       Logs
                     </button>
+
+                    <button
+                      className="btn btn-brand-outline btn-sm d-flex align-items-center gap-1"
+                      onClick={() => runNow(s.id)}
+                    >
+                      <FiPlay size={16} />
+                      Run Now
+                    </button>
                     <button
                       className="btn btn-danger-outline btn-sm d-flex align-items-center gap-1"
                       onClick={() => deleteScheduler(s.id)}
@@ -183,16 +228,23 @@ export default function WorkflowSchedulerPage() {
                         {runs.map((run) => (
                           <li
                             key={run.id}
-                            className={`list-group-item d-flex justify-content-between align-items-center ${
-                              activeRun?.id === run.id ? "active" : ""
-                            }`}
+                            className={`list-group-item d-flex justify-content-between align-items-center ${activeRun?.id === run.id ? "active" : ""}`}
                             style={{ cursor: "pointer" }}
                             onClick={() => setActiveRun(run)}
                           >
-                            <span>
-                              {new Date(run.started_at).toLocaleString()}  
+                            <span className="d-flex align-items-center">
+                              {getStatusIcon(run.status)}
+                              {new Date(run.started_at).toLocaleString()}
                             </span>
-                            <span className={`badge ${run.status === "SUCCESS" ? "bg-success" : "bg-danger"}`}>
+                            <span
+                              className={`badge ${run.status === "SUCCESS" ? "bg-success" :
+                                  run.status === "STARTED" ? "bg-primary" :
+                                    run.status === "QUEUED" || run.status === "PENDING" ? "bg-warning text-dark" :
+                                      run.status === "REMOVED" ? "bg-secondary" :
+                                        run.status === "REVOKED" ? "bg-dark" :
+                                          "bg-danger"
+                                }`}
+                            >
                               {run.status}
                             </span>
                           </li>
@@ -209,6 +261,53 @@ export default function WorkflowSchedulerPage() {
                           {activeRun.finished_at && (
                             <p><b>Finished:</b> {new Date(activeRun.finished_at).toLocaleString()}</p>
                           )}
+                          <p><b>Task ID:</b> {activeRun.task_id || "—"}</p>
+
+                          {/* Кнопки управления задачей */}
+                          {activeRun.task_id && (
+                            <div className="d-flex gap-2 mb-3">
+                              <button
+                                className="btn btn-danger-outline btn-sm d-flex align-items-center gap-1"
+                                onClick={async () => {
+                                  if (window.confirm("Удалить задачу из очереди?")) {
+                                    try {
+                                      await api.delete(
+                                        `workflows/task/${activeRun.task_id}/?queue=workflows`
+                                      );
+                                      alert("Задача удалена");
+                                      fetchRuns(activeScheduler.workflow); // обновляем список
+                                    } catch (err) {
+                                      alert("Ошибка при удалении задачи");
+                                      console.error(err);
+                                    }
+                                  }
+                                }}
+                              >
+                                <FiTrash2 size={14} /> Remove
+                              </button>
+
+                              <button
+                                className="btn btn-brand-outline btn-sm d-flex align-items-center gap-1"
+                                onClick={async () => {
+                                  if (window.confirm("Прервать выполнение задачи?")) {
+                                    try {
+                                      await api.delete(
+                                        `workflows/task/${activeRun.task_id}/?queue=workflows&revoke=1`
+                                      );
+                                      alert("Задача прервана");
+                                      fetchRuns(activeScheduler.workflow);
+                                    } catch (err) {
+                                      alert("Ошибка при остановке задачи");
+                                      console.error(err);
+                                    }
+                                  }
+                                }}
+                              >
+                                <FiXCircle size={14} /> Revoke
+                              </button>
+                            </div>
+                          )}
+
                           <hr />
                           <h6>Output:</h6>
                           <pre style={{ maxHeight: "200px", overflow: "auto" }}>
