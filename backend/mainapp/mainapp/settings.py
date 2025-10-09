@@ -150,3 +150,27 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 logger = logging.getLogger("django_auth_ldap")
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
+
+FILE_UPLOAD_TEMP_DIR = env("FILE_UPLOAD_TEMP_DIR", default=r"D:\Azat\ProdCast2.0\Temp\django_uploads")
+
+# Маленькие файлы держим в памяти, чтобы лишний раз не писать на диск
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024  # подстройте под свой трафик
+
+# Логи — с ротацией и на D:
+DJANGO_LOG_DIR = env("DJANGO_LOG_DIR", default=r"D:\Azat\ProdCast2.0\logs")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "rotating_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": os.path.join(DJANGO_LOG_DIR, "django.log"),
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 5,
+            "encoding": "utf-8",
+        },
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "root": {"handlers": ["rotating_file", "console"], "level": "INFO"},
+}

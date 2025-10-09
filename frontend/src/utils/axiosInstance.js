@@ -54,7 +54,13 @@ api.interceptors.response.use(
 // --- Local Agent client (no JWT needed) ---
 export const localApi = axios.create({
   baseURL: "http://127.0.0.1:9000",
-  timeout: 10000,
+  timeout: 0,
+});
+
+// На всякий случай - обнуляем таймаут в перехватчике, если где-то его перезапишут
+localApi.interceptors.request.use((config) => {
+  config.timeout = 0;
+  return config;
 });
 
 export default api;

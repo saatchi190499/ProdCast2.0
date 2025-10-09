@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from apiapp.models import ObjectType, ObjectInstance, ObjectTypeProperty
+from apiapp.models import ObjectType, ObjectInstance, ObjectTypeProperty, GapNetworkData
 from ..serializers import ObjectInstanceSerializer
 from rest_framework import status
 
@@ -47,3 +47,23 @@ class ObjectInstanceListView(APIView):
         instances = ObjectInstance.objects.select_related("object_type").all()
         serializer = ObjectInstanceSerializer(instances, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class GapNetworkDataListView(APIView):
+
+    def get(self, request):
+        data = []
+        for obj in GapNetworkData.objects.all():
+            # branches: {branch_point_uid: [pipe_dicts]}
+            # Collect branch names (label or uid)
+            branches = {}
+            for bp, pipes in (obj.branches or {}).items():
+                branches[bp] = [
+                    {"label": pipe.get("label", pipe.get("uid", "")), "uid": pipe.get("uid", "")}
+                    if isinstance(pipe, dict) else {"label": str(pipe), "uid": str(pipe)}
+                    for pipe in pipes
+                ]
+            data.append({
+                "well_name": obj.well_name,
+                "branches": branches,
+            })
+        return Response(data)

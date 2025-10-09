@@ -139,7 +139,7 @@ def extract_topology(srv, model="PROD"):
 
     # Step 3: routes
     routes = find_paths_from_well_to_sep(graph, uid_type)
-
+    
     # Step 4: build JSON-friendly structure
     data = {
         "model": model,
@@ -153,7 +153,7 @@ def extract_topology(srv, model="PROD"):
         },
         "routes": routes,
         "routes_named": {
-            well_uid: [
+            srv.get_value(f"GAP.MOD[{model}].EQUIP[{well_uid}].Label"): [
                 [
                     {"uid": uid, "type": uid_type.get(uid, "?"), "label": uid_label.get(uid, uid)}
                     for uid in path

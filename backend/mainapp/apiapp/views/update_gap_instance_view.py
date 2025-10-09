@@ -25,14 +25,46 @@ class UpdateInstancesView(APIView):
                 gap_path = tmp.name
 
             try:
+                from petex_client import gap_tools
+                from ..models import GapNetworkData
                 with PetexServer() as srv:
-                    gap.open_gap_model(srv, gap_path)
+                    gap.start(srv)
+                    gap.open_file(srv, gap_path)
                     equips = update_equip_types_and_instances(srv)
+
+                    # --- Extract topology and save to GapNetworkData globally for each well ---
+                    topology = gap_tools.extract_topology(srv)
+                    all_branches = topology.get("branches", {})
+                    for well_name, paths in topology.get("routes_named", {}).items():
+                        # Collect all UIDs in this well's route
+                        route_uids = set()
+                        for path in paths:
+                            route_uids.update([seg["uid"] if isinstance(seg, dict) else seg for seg in path])
+
+                        # Filter branches: only keep pipes that are in the route
+                        well_branches = {}
+                        for bp, pipes in all_branches.items():
+                            filtered_pipes = [pipe for pipe in pipes if (pipe.get("uid") if isinstance(pipe, dict) else pipe) in route_uids]
+                            if filtered_pipes:
+                                well_branches[bp] = filtered_pipes
+
+                        # Filter trunks: only keep those in the route
+                        all_trunks = topology.get("trunks", [])
+                        filtered_trunks = [trunk for trunk in all_trunks if (trunk.get("uid") if isinstance(trunk, dict) else trunk) in route_uids]
+
+                        GapNetworkData.objects.create(
+                            well_uid=well_name,
+                            paths=paths,
+                            branches=well_branches,
+                            trunks=filtered_trunks,
+                        )
+
+                    gap.shutdown(srv)
             finally:
                 os.remove(gap_path)
 
             return Response(
-                {"message": "Types & Instances updated", "data": equips},
+                {"message": "Types & Instances updated, topology saved", "data": equips},
                 status=status.HTTP_200_OK,
             )
 
@@ -86,3 +118,4 @@ def update_equip_types_and_instances(srv: PetexServer):
                 ).delete()
 
     return equips
+

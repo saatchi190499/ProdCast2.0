@@ -46,6 +46,7 @@ urlpatterns = [
     path("object-instances/", ObjectInstanceListView.as_view(), name="object-instances"),
     path("update-instances/", UpdateInstancesView.as_view(), name="update-instances"),
     path("unit-system-property-mapping/", UnitSystemPropertyMappingView.as_view()),
+    path("gap-network-data/", GapNetworkDataListView.as_view()),
 
     # --- Scenarios ---
     path("scenarios/create/", ScenarioCreateView.as_view(), name="scenario-create"),

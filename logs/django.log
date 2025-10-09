@@ -1,0 +1,351 @@
+Watching for file changes with StatReloader
+Unauthorized: /api/me/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/me/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/components/workflows/all/
+Unauthorized: /api/workflow-schedulers/
+Unauthorized: /api/components/workflows/all/
+Unauthorized: /api/workflow-schedulers/
+Unauthorized: /api/data-sources/Workflows/components/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/data-sources/Workflows/components/
+Unauthorized: /api/petex/introspect/
+Unauthorized: /api/variables/
+D:\Azat\ProdCast2.0\backend\mainapp\petex_client\gap.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /api/data-sources/Events/components/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/data-sources/Events/components/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/servers/
+Unauthorized: /api/users/
+Unauthorized: /api/object-instances/
+Unauthorized: /api/object-instances/
+Unauthorized: /api/users/
+Unauthorized: /api/servers/
+Unauthorized: /api/unit-system-property-mapping/
+Unauthorized: /api/unit-system-property-mapping/
+Unauthorized: /api/components/4/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/me/
+Unauthorized: /api/components/4/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/me/
+Watching for file changes with StatReloader
+Unauthorized: /api/data-sources/
+Unauthorized: /api/me/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/me/
+Internal Server Error: /api/update-instances/
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /api/me/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/me/
+Unauthorized: /api/data-sources/
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+Internal Server Error: /api/update-instances/
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /api/data-sources/
+Unauthorized: /api/me/
+Unauthorized: /api/me/
+Unauthorized: /api/data-sources/
+D:\Azat\ProdCast2.0\backend\mainapp\petex_client\gap.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+Not Found: /favicon.ico
+Unauthorized: /api/data-sources/Events/components/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/data-sources/Events/components/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/data-sources/Events/components/
+Not Found: /api/gap-network-data/
+Not Found: /api/gap-network-data/
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\object_meta_data_view.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\urls.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\admin.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\admin.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /api/users/
+Unauthorized: /api/object-instances/
+Unauthorized: /api/servers/
+Unauthorized: /api/object-instances/
+Unauthorized: /api/users/
+Unauthorized: /api/servers/
+Unauthorized: /api/components/workflows/9/
+Unauthorized: /api/token/refresh/
+D:\Azat\ProdCast2.0\backend\mainapp\petex_client\gap_tools.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /api/update-instances/
+Internal Server Error: /api/update-instances/
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\update_gap_instance_view.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /api/update-instances/
+D:\Azat\ProdCast2.0\backend\mainapp\petex_client\gap_tools.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\petex_client\gap_tools.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\models.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\admin.py changed, reloading.
+Watching for file changes with StatReloader
+Internal Server Error: /admin/apiapp/gapnetworkdata/
+Traceback (most recent call last):
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\mssql\base.py", line 677, in execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+pyodbc.ProgrammingError: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'well_name'. (207) (SQLExecDirectW); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'well_name'. (207)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 716, in wrapper
+    return self.admin_site.admin_view(view)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\views\decorators\cache.py", line 80, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\contrib\admin\sites.py", line 240, in inner
+    return view(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\utils\decorators.py", line 48, in _wrapper
+    return bound_method(*args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\utils\decorators.py", line 188, in _view_wrapper
+    result = _process_exception(request, e)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\utils\decorators.py", line 186, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\contrib\admin\options.py", line 2126, in changelist_view
+    "selection_note": _("0 of %(cnt)s selected") % {"cnt": len(cl.result_list)},
+                                                           ~~~^^^^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\models\query.py", line 382, in __len__
+    self._fetch_all()
+    ~~~~~~~~~~~~~~~^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\models\query.py", line 1928, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\models\query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+        chunked_fetch=self.chunked_fetch, chunk_size=self.chunk_size
+    )
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\mssql\base.py", line 677, in execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: ('42S22', "[42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'well_name'. (207) (SQLExecDirectW); [42S22] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Invalid column name 'well_name'. (207)")
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\admin.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /api/data-sources/Events/components/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/data-sources/Events/components/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/data-sources/Events/components/
+Internal Server Error: /api/gap-network-data/
+Traceback (most recent call last):
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\object_meta_data_view.py", line 66, in get
+    "well_uid": obj.well_uid,
+                ^^^^^^^^^^^^
+AttributeError: 'GapNetworkData' object has no attribute 'well_uid'
+Internal Server Error: /api/gap-network-data/
+Traceback (most recent call last):
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\object_meta_data_view.py", line 66, in get
+    "well_uid": obj.well_uid,
+                ^^^^^^^^^^^^
+AttributeError: 'GapNetworkData' object has no attribute 'well_uid'
+Internal Server Error: /api/gap-network-data/
+Traceback (most recent call last):
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\object_meta_data_view.py", line 66, in get
+    "well_uid": obj.well_uid,
+                ^^^^^^^^^^^^
+AttributeError: 'GapNetworkData' object has no attribute 'well_uid'
+Not Found: /favicon.ico
+Internal Server Error: /api/gap-network-data/
+Traceback (most recent call last):
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "D:\Azat\ProdCast2.0\backend\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+  File "D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\object_meta_data_view.py", line 66, in get
+    "well_uid": obj.well_uid,
+                ^^^^^^^^^^^^
+AttributeError: 'GapNetworkData' object has no attribute 'well_uid'
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\object_meta_data_view.py changed, reloading.
+Watching for file changes with StatReloader
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\views\object_meta_data_view.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /api/gap-network-data/
+Unauthorized: /api/unit-system-property-mapping/
+Unauthorized: /api/components/4/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/me/
+Unauthorized: /api/unit-system-property-mapping/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/components/4/
+Unauthorized: /api/gap-network-data/
+Unauthorized: /api/me/
+Bad Request: /api/components/events/4
+D:\Azat\ProdCast2.0\backend\mainapp\apiapp\models.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Unauthorized: /api/gap-network-data/
+Unauthorized: /api/unit-system-property-mapping/
+Unauthorized: /api/components/4/
+Unauthorized: /api/me/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/gap-network-data/
+Unauthorized: /api/unit-system-property-mapping/
+Unauthorized: /api/components/4/
+Unauthorized: /api/me/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/petex/introspect/
+Unauthorized: /api/components/workflows/8/
+Unauthorized: /api/components/workflows/8/versions/
+Unauthorized: /api/variables/
+Unauthorized: /api/components/workflows/8/
+Unauthorized: /api/petex/introspect/
+Unauthorized: /api/variables/
+Unauthorized: /api/components/workflows/8/versions/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/me/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/me/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/token/refresh/
+Unauthorized: /api/components/events/4
+Internal Server Error: /api/workflows/task/c208a97b-f73d-4435-a2ac-fddbf7bdba95/
+Internal Server Error: /api/workflows/task/c208a97b-f73d-4435-a2ac-fddbf7bdba95/
+D:\Azat\ProdCast2.0\backend\mainapp\petex_client\gap_tools.py changed, reloading.
+Watching for file changes with StatReloader
+Unauthorized: /api/data-sources/Workflows/components/
+Unauthorized: /api/data-sources/
+Unauthorized: /api/data-sources/Workflows/components/
+Unauthorized: /api/data-sources/

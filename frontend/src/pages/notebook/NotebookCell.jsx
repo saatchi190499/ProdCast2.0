@@ -24,7 +24,7 @@ export default function NotebookCell({ cell, onChange, output }) {
         <div style={{ marginTop: 6 }}>
           {output.loading ? (
             <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--brand)" }}>
-              <Loader2 size={18} className="spin" /> Running…
+              <Loader2 size={18} className="spin" style={{ animation: "spin 1s linear infinite" }} /> Running…
             </div>
           ) : output.stderr ? (
             <div

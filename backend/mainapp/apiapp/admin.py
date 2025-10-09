@@ -6,9 +6,17 @@ from django.utils.safestring import mark_safe
 from .models import (
     UnitSystem, UnitType, UnitDefinition, UnitCategory, UnitSystemCategoryDefinition,
     DataSource, ScenarioComponent, ServersClass, ScenarioClass, ScenarioComponentLink,
-    ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, ScenarioLog, Workflow, WorkflowScheduler, WorkflowSchedulerLog
+    ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, ScenarioLog, Workflow, 
+    WorkflowScheduler, WorkflowSchedulerLog, GapNetworkData
 )
 
+
+@admin.register(GapNetworkData)
+class GapNetworkDataAdmin(admin.ModelAdmin):
+    list_display = ("well_name", "created_at")
+    search_fields = ("well_name",)
+    readonly_fields = ("created_at",)
+    list_filter = ("created_at",)
 # --- New Unit System Models ---
 
 @admin.register(UnitSystem)
@@ -296,3 +304,4 @@ class WorkflowSchedulerAdmin(admin.ModelAdmin):
 class WorkflowSchedulerLogAdmin(admin.ModelAdmin):
     list_display = ("scheduler", "timestamp", "status", "message")
     list_filter = ("status", "timestamp")
+

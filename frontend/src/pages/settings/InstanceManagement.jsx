@@ -181,7 +181,7 @@ export default function InstanceManagement() {
                     </Alert>
                 )}
 
-                {wells.length > 0 && (
+                {Array.isArray(wells) && wells.length > 0 && (
                     <ListGroup className="mt-3">
                         {wells.map((well, idx) => (
                             <ListGroup.Item key={idx}>{well}</ListGroup.Item>

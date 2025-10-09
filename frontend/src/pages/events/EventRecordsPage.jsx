@@ -5,10 +5,12 @@ import { Card, Table, Button, Form, Spinner, Alert } from "react-bootstrap";
 import { saveAs } from "file-saver";
 import Papa from "papaparse";
 import { useTranslation } from "react-i18next";
+import useWellBranches from "./useWellBranches";
 import "../DataSourcePage.css";
 
 
 export default function EventRecordsPage() {
+  const { wellBranches, loadingBranches, errorBranches } = useWellBranches();
   const { id } = useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -34,7 +36,6 @@ export default function EventRecordsPage() {
     date_time: "", object_type: "", object_instance: "", object_type_property: "",
     value: "", sub_data_source: "", description: ""
   };
-
 
   const getCategoryForProperty = (objectTypeName, propertyName) => {
     const prop = propertyOptions[objectTypeName]?.find(p => p.name === propertyName);
@@ -498,41 +499,58 @@ export default function EventRecordsPage() {
                     </Form.Select>
                   </td>
                   <td className={error.object_type_property ? 'cell-error' : ''}>
-                    <div className="d-flex align-items-center">
-                      <Form.Control
+                    {r.object_type_property === "Route" ? (
+                      <Form.Select
                         className="ds-input"
-                        type="number"
-                        value={(() => {
-                          // Show the input as-is if not a valid number
-                          const { scale, offset } = getConversionForProperty(r.object_type_property);
-                          const rawValue = Number(r.value);
-                          if (typeof r.value === "string" && isNaN(rawValue)) return r.value;
-                          if (r.value === "" || r.value === null) return "";
-                          // Only convert if it's a valid number
-                          return (rawValue * scale + offset) || "";
-                        })()}
-                        onChange={(e) => {
-                          const { scale, offset } = getConversionForProperty(r.object_type_property);
-                          const input = e.target.value.replace(",", "."); // allow comma as decimal
-                          // Accept empty string or any string
-                          if (input === "" || isNaN(Number(input))) {
-                            handleChange(i, "value", input);
-                          } else {
-                            const displayValue = Number(input);
-                            const baseValue = scale !== 0 ? ((displayValue - offset) / scale) : displayValue;
-                            handleChange(i, "value", baseValue);
-                          }
-                        }}
-                        inputMode="decimal"
-                        autoComplete="off"
-                        spellCheck={false}
-                        pattern="[0-9.,\-]*"
-                        placeholder={t("value")}
-                      />
-                      <span className="ms-2 text-muted">
-                        {getUnitForProperty(r.object_type_property)}
-                      </span>
-                    </div>
+                        value={r.value || ""}
+                        onChange={e => handleChange(i, "value", e.target.value)}
+                        disabled={loadingBranches}
+                      >
+                        <option value="">Select Branch</option>
+                        {(wellBranches[r.object_instance] || []).map((branchName, idx) => (
+                          <option key={idx} value={branchName}>{branchName}</option>
+                        ))}
+                      </Form.Select>
+                    ) : (
+                      <div className="d-flex align-items-center">
+                        <Form.Control
+                          className="ds-input"
+                          type="number"
+                          value={(() => {
+                            const v = r.value;
+                            if (v === "" || v === null) return "";
+                            // Text values — don't convert
+                            if (isNaN(Number(v))) return v;
+                            // Numeric values — apply conversion
+                            const { scale, offset } = getConversionForProperty(r.object_type_property);
+                            return (Number(v) * scale + offset).toString();
+                          })()}
+                          onChange={(e) => {
+                            const { scale, offset } = getConversionForProperty(r.object_type_property);
+                            const input = e.target.value.replace(",", "."); // allow comma as decimal
+                            // Accept empty string or any string
+                            if (input === "") {
+                              handleChange(i, "value", "");
+                            } else if (isNaN(Number(input))) {
+                              // user entered text — treat as raw CharField
+                              handleChange(i, "value", input);
+                            } else {
+                              const displayValue = Number(input);
+                              const baseValue = scale !== 0 ? ((displayValue - offset) / scale) : displayValue;
+                              handleChange(i, "value", baseValue);
+                            }
+                          }}
+                          inputMode="decimal"
+                          autoComplete="off"
+                          spellCheck={false}
+                          pattern="[0-9.,\-]*"
+                          placeholder={t("value")}
+                        />
+                        <span className="ms-2 text-muted">
+                          {getUnitForProperty(r.object_type_property)}
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td>
                     <Form.Control

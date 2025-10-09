@@ -361,7 +361,7 @@ class MainClass(models.Model):
         verbose_name="Object Type Property"
     )
 
-    value = models.DecimalField(max_digits=38, decimal_places=28, db_column='value', null=True)
+    value = models.CharField(max_length=100, db_column='value', null=True, blank=True)
     date_time = models.DateTimeField("Date", db_column='date', null=True)
     # ⬇️ УДАЛЕНО: sub_data_source = models.CharField(...)
     tag = models.CharField("Tag", max_length=100, blank=True, null=True)
@@ -508,12 +508,8 @@ class WorkflowRun(models.Model):
 
 
 class GapNetworkData(models.Model):
-    component = models.ForeignKey(
-        "ScenarioComponent",
-        on_delete=models.CASCADE,
-        related_name="gap_networks"
-    )
-    well_uid = models.CharField(max_length=100)
+    # component link removed; topology is now global/base
+    well_name = models.CharField(max_length=100)
     paths = models.JSONField()
     branches = models.JSONField()
     trunks = models.JSONField()
