@@ -1,1 +1,3 @@
 /backend/mainapp/staticfiles/
+logs/
+Temp/
