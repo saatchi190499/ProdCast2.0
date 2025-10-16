@@ -15,6 +15,7 @@ from .models import (
     WorkflowSchedulerLog,
     WorkflowRun,
 )
+from django.utils.timezone import now
 
 # ---------- Servers ----------
 class ServerSerializer(serializers.ModelSerializer):
@@ -164,6 +165,7 @@ class MainClassSerializer(serializers.ModelSerializer):
             "object_type_property",
             "value",
             "date_time",
+            "tag",
             "sub_data_source",
             "description"
         ]
@@ -198,7 +200,19 @@ class MainClassSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["data_source_id"] = self.context.get("data_source_id")
         validated_data["data_source_name"] = self.context.get("data_source_name")
+
+        # 🕒 Automatically fill date_time if missing
+        if not validated_data.get("date_time"):
+            validated_data["date_time"] = now()
+
         return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # 🕒 Also fill date_time if missing during update
+        if not validated_data.get("date_time"):
+            validated_data["date_time"] = now()
+
+        return super().update(instance, validated_data)
 
 # ---------- Workflow ----------
 class WorkflowSerializer(serializers.ModelSerializer):

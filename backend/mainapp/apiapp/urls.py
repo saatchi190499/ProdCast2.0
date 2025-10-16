@@ -15,6 +15,7 @@ from .views.petex_tips_view import *
 from .views.update_gap_instance_view import *
 from .views.server_view import *
 from .views.workflow_schduler_view import *
+from .views.pi_data_view import *
 
 # ---------------- Router endpoints ----------------
 router = DefaultRouter()
@@ -72,4 +73,9 @@ urlpatterns = [
 
     # --- Router include ---
     path("", include(router.urls)),
+
+    path("components/pi-records/<int:component_id>/row/<int:row_id>/fetch_value/", fetch_pi_value_for_component_row),
+    path("components/pi-records/<int:component_id>/row/<int:row_id>/history/", pi_history_for_component_row),
+    path("components/pi-records/<int:component_id>/", PIRecordsView.as_view()),
+
 ]

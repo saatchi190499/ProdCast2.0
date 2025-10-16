@@ -365,6 +365,13 @@ export default function DataSourcePage() {
                           alert(t("editOnlyAuthor"));
                         }
                       }
+                      if (sourceName === "PI System") {
+                        if (user?.username === c.created_by || role === "admin") {
+                          navigate(`/components/pi/${c.id}`);
+                        } else {
+                          alert(t("editOnlyAuthor"));
+                        }
+                      }
                     }}
                   >
                     <td>{c.name}</td>
