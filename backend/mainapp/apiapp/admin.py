@@ -206,16 +206,16 @@ class ObjectTypePropertyAdmin(admin.ModelAdmin):
 @admin.register(MainClass)
 class MainClassAdmin(admin.ModelAdmin):
     list_display = (
-        'data_set_id', 'data_source', 'object_type',
+        'data_set_id', 'component', 'object_type',
         'object_instance', 'object_type_property', 'value', 'date_time', 'tag',
     )
     list_filter = (
-        'data_source', 'object_type', 'object_instance',
+        'component', 'component__data_source', 'object_type', 'object_instance',
         'object_type_property',  'date_time'
     )
     search_fields = (
         'data_set_id', 'description',
-        'data_source__data_source_name', # Search through ForeignKey related names
+        'component__data_source__data_source_name', # Search through ForeignKey related names
         'object_type__object_type_name',
         'object_instance__object_instance_name',
         'object_type_property__object_type_property_name'
@@ -223,8 +223,8 @@ class MainClassAdmin(admin.ModelAdmin):
     # The pre_save signal on the model handles the validation.
 
     fieldsets = (
-        ('Data Source Information', {
-            'fields': ('data_source',)
+        ('Component', {
+            'fields': ('component',)
         }),
         ('Object Details', {
             'fields': ('object_type', 'object_instance', 'object_type_property')

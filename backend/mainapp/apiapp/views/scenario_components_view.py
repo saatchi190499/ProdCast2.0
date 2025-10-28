@@ -79,7 +79,7 @@ class EventRecordsView(APIView):
         """Return all records for the given component."""
         component = get_object_or_404(DataSourceComponent, id=component_id)
         events = MainClass.objects.filter(
-            data_source=component.data_source
+            component=component
         ).order_by("date_time")
         serializer = MainClassSerializer(events, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -97,7 +97,7 @@ class EventRecordsView(APIView):
         # Get current records in DB
         existing_records = {
             r.data_set_id: r for r in MainClass.objects.filter(
-                data_source=component.data_source
+                component=component
             )
         }
 
@@ -114,7 +114,7 @@ class EventRecordsView(APIView):
                     data=r,
                     partial=True,
                     context={
-                        "data_source": component.data_source
+                        "component": component
                     }
                 )
                 if serializer.is_valid():
@@ -128,7 +128,7 @@ class EventRecordsView(APIView):
                 serializer = MainClassSerializer(
                     data=r,
                     context={
-                        "data_source": component.data_source
+                        "component": component
                     }
                 )
                 if serializer.is_valid():
@@ -168,7 +168,7 @@ class PIRecordsView(APIView):
     def get(self, request, component_id):
         component = get_object_or_404(DataSourceComponent, id=component_id)
         records = MainClass.objects.filter(
-            data_source=component.data_source
+            component=component
         ).order_by("object_instance__object_instance_name")
         serializer = MainClassSerializer(records, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -181,7 +181,7 @@ class PIRecordsView(APIView):
 
         existing_records = {
             r.data_set_id: r for r in MainClass.objects.filter(
-                data_source=component.data_source
+                component=component
             )
         }
 
@@ -199,7 +199,7 @@ class PIRecordsView(APIView):
                 obj = existing_records[rec_id]
                 serializer = MainClassSerializer(
                     obj, data=r, partial=True,
-                    context={"data_source": component.data_source}
+                    context={"component": component}
                 )
                 if serializer.is_valid():
                     obj = serializer.save()
@@ -210,7 +210,7 @@ class PIRecordsView(APIView):
             else:
                 serializer = MainClassSerializer(
                     data=r,
-                    context={"data_source": component.data_source}
+                    context={"component": component}
                 )
                 if serializer.is_valid():
                     obj = serializer.save()

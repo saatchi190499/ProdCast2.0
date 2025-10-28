@@ -153,10 +153,12 @@ class DataSourceSerializer(serializers.ModelSerializer):
 # ---------- MainClass ----------
 
 class MainClassSerializer(serializers.ModelSerializer):
+    data_source = serializers.CharField(source="component.data_source.data_source_name", read_only=True)
     class Meta:
         model = MainClass
         fields = [
             "data_set_id",
+            "component",
             "data_source",
             "object_type",
             "object_instance",
@@ -196,8 +198,8 @@ class MainClassSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
 
     def create(self, validated_data):
-        if "data_source" not in validated_data and self.context.get("data_source") is not None:
-            validated_data["data_source"] = self.context.get("data_source")
+        if "component" not in validated_data and self.context.get("component") is not None:
+            validated_data["component"] = self.context.get("component")
 
         # 🕒 Automatically fill date_time if missing
         if not validated_data.get("date_time"):

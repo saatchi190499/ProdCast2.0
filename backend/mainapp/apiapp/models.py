@@ -345,11 +345,12 @@ class ObjectTypeProperty(models.Model):
 # ---------- Main Data ----------
 class MainClass(models.Model):
     data_set_id = models.AutoField(primary_key=True, unique=True)
-    data_source = models.ForeignKey(
-        DataSource,
-        on_delete=models.PROTECT,
-        verbose_name="Data Source",
-        db_column='data_source_name_id'
+    component = models.ForeignKey(
+        DataSourceComponent,
+        on_delete=models.CASCADE,
+        verbose_name="Component",
+        null=True,
+        blank=True,
     )
     object_type = models.ForeignKey(ObjectType, on_delete=models.CASCADE, verbose_name="Object Type")
     object_instance = models.ForeignKey(ObjectInstance, on_delete=models.CASCADE, verbose_name="Object Instance")
@@ -376,6 +377,10 @@ class MainClass(models.Model):
         otp = self.object_type_property
         return otp.object_type_property_category if otp else None
 
+    @property
+    def data_source(self):
+        return self.component.data_source if self.component else None
+
     def to_dict(self):
         return {
             "data_source": str(self.data_source),
@@ -390,9 +395,9 @@ class MainClass(models.Model):
         db_table = "apiapp_mainclass"
         verbose_name = "Main Data Record"
         verbose_name_plural = "Main Data Records"
-        ordering = ["data_source"]
+        ordering = ["component"]
         indexes = [
-            models.Index(fields=["data_source"]),
+            models.Index(fields=["component"]),
             models.Index(fields=["object_type", "object_type_property"]),
         ]
 
