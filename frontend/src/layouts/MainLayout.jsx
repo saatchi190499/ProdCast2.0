@@ -133,6 +133,14 @@ export default function MainLayout() {
     }
   };
 
+  const componentRouteFor = (dsName, compId) => {
+    if (dsName === "Events") return `/components/events/${compId}`;
+    if (dsName === "Workflows") return `/components/workflows/${compId}`;
+    if (dsName === "PI System") return `/components/pi/${compId}`;
+    // Fallback: open the data source page
+    return `/input/${dsName}`;
+  };
+
   // ---------------- render ----------------
   return (
     <div
@@ -235,6 +243,14 @@ export default function MainLayout() {
                           {ds.data_source_name}
                         </NavLink>
 
+                        {components[ds.data_source_name] &&
+                          components[ds.data_source_name].map((comp) => (
+                            <NavLink
+                              key={comp.id}
+                              to={componentRouteFor(ds.data_source_name, comp.id)}
+                              className="inputs-dd-subitem"
+                            />
+                          ))}
                       </div>
                     ))}
                   </div>
@@ -309,9 +325,7 @@ export default function MainLayout() {
                               key={comp.id}
                               to={`/output/${ds.data_source_name}/${comp.name}`}
                               className="inputs-dd-subitem"
-                            >
-                              └ {comp.name}
-                            </NavLink>
+                            />
                           ))}
                       </div>
                     ))}

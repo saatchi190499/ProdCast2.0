@@ -171,7 +171,7 @@ class DataSourceComponent(models.Model):
         return f"{self.name} ({self.data_source})"
 
     class Meta:
-        db_table = 'apiapp_scenario_component'
+        db_table = 'apiapp_data_source_component'
         verbose_name = "Data Source Component"
         verbose_name_plural = "Data Source Components"
         ordering = ["-created_date"]

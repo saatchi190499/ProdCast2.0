@@ -127,6 +127,11 @@ export default function DataSourcePage() {
         return;
       }
 
+      if (sourceName === "PI System") {
+        navigate(`/components/pi/${res.data.id}`);
+        return;
+      }
+
       const response = await api.get(
         `/data-sources/${sourceName}/components/`
       );

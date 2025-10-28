@@ -10,7 +10,10 @@ class Command(BaseCommand):
         data_sources = [
             ("Models", "INPUT"),
             ("Events", "INPUT"),
+            ("PI System", "INPUT"),
             ("Workflows", "PROCESS"),
+            ("Workflow Results", "OUTPUT"),
+            ("Forecast Results", "OUTPUT"),
         ]
         for name, dtype in data_sources:
             DataSource.objects.get_or_create(
