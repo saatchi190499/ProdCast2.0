@@ -157,7 +157,7 @@ class DataSource(models.Model):
 
 
 # ---------- Scenario Component (универсальный) ----------
-class ScenarioComponent(models.Model):
+class DataSourceComponent(models.Model):
     name = models.CharField("Name", max_length=100, unique=True)
     description = models.TextField("Description", blank=True)
     data_source = models.ForeignKey(DataSource, on_delete=models.PROTECT, verbose_name="Data Source")
@@ -172,8 +172,8 @@ class ScenarioComponent(models.Model):
 
     class Meta:
         db_table = 'apiapp_scenario_component'
-        verbose_name = "Scenario Component"
-        verbose_name_plural = "Scenario Components"
+        verbose_name = "Data Source Component"
+        verbose_name_plural = "Data Source Components"
         ordering = ["-created_date"]
 
 
@@ -198,7 +198,6 @@ class ServersClass(models.Model):
     is_active = models.BooleanField(default=True)
 
     objects = ActiveManager()
-    all_objects = models.Manager()
 
     def __str__(self):
         return self.server_name
@@ -252,7 +251,7 @@ class ScenarioLog(models.Model):
 # ---------- Scenario ↔ Component Link ----------
 class ScenarioComponentLink(models.Model):
     scenario = models.ForeignKey('ScenarioClass', on_delete=models.CASCADE, verbose_name="Scenario")
-    component = models.ForeignKey('ScenarioComponent', on_delete=models.CASCADE, verbose_name="Component")
+    component = models.ForeignKey('DataSourceComponent', on_delete=models.CASCADE, verbose_name="Component")
 
     class Meta:
         db_table = 'apiapp_scenario_component_link'
@@ -346,8 +345,12 @@ class ObjectTypeProperty(models.Model):
 # ---------- Main Data ----------
 class MainClass(models.Model):
     data_set_id = models.AutoField(primary_key=True, unique=True)
-    data_source_name = models.ForeignKey(DataSource, on_delete=models.PROTECT, verbose_name="Data Source")
-    data_source_id = models.IntegerField()
+    data_source = models.ForeignKey(
+        DataSource,
+        on_delete=models.PROTECT,
+        verbose_name="Data Source",
+        db_column='data_source_name_id'
+    )
     object_type = models.ForeignKey(ObjectType, on_delete=models.CASCADE, verbose_name="Object Type")
     object_instance = models.ForeignKey(ObjectInstance, on_delete=models.CASCADE, verbose_name="Object Instance")
     object_type_property = ChainedForeignKey(
@@ -375,12 +378,11 @@ class MainClass(models.Model):
 
     def to_dict(self):
         return {
-            "data_source_id": self.data_source_id,
+            "data_source": str(self.data_source),
             "object_instance_id": self.object_instance_id,
             "date_time": self.date_time.isoformat() if self.date_time else None,
             "object_type_id": self.object_type_id,
             "object_type_property_id": self.object_type_property_id,
-            "data_source_name": str(self.data_source_name),
             "sub_data_source": self.sub_data_source,  # ⬅️ Добавили в вывод
         }
 
@@ -388,9 +390,9 @@ class MainClass(models.Model):
         db_table = "apiapp_mainclass"
         verbose_name = "Main Data Record"
         verbose_name_plural = "Main Data Records"
-        ordering = ["-data_source_id", "data_source_name"]
+        ordering = ["data_source"]
         indexes = [
-            models.Index(fields=["data_source_name", "data_source_id"]),
+            models.Index(fields=["data_source"]),
             models.Index(fields=["object_type", "object_type_property"]),
         ]
 
@@ -412,7 +414,7 @@ def workflow_ipynb_path(instance, filename):
 
 class Workflow(models.Model):
     component = models.OneToOneField(
-        "ScenarioComponent",
+        "DataSourceComponent",
         on_delete=models.CASCADE,
         related_name="workflow"
     )

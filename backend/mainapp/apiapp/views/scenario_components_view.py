@@ -1,7 +1,7 @@
 # views.py
 
-from ..models import ScenarioComponent, DataSource, MainClass, ScenarioClass
-from ..serializers import ScenarioComponentSerializer, DataSourceSerializer, MainClassSerializer
+from ..models import DataSourceComponent, DataSource, MainClass, ScenarioClass
+from ..serializers import DataSourceComponentSerializer, DataSourceSerializer, MainClassSerializer
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView
@@ -19,19 +19,19 @@ class DataSourceListView(APIView):
         serializer = DataSourceSerializer(sources, many=True)
         return Response(serializer.data)
 
-class ScenarioComponentsBySourceView(APIView):
+class DataSourceComponentsBySourceView(APIView):
     def get(self, request, source_name):
         try:
             source = DataSource.objects.get(data_source_name__iexact=source_name)
-            components = ScenarioComponent.objects.filter(data_source=source)
-            serializer = ScenarioComponentSerializer(components, many=True)
+            components = DataSourceComponent.objects.filter(data_source=source)
+            serializer = DataSourceComponentSerializer(components, many=True)
             return Response(serializer.data)
         except DataSource.DoesNotExist:
             return Response({"error": "DataSource not found"}, status=status.HTTP_404_NOT_FOUND)
 
-class ScenarioComponentCreateView(CreateAPIView):
-    queryset = ScenarioComponent.objects.all()
-    serializer_class = ScenarioComponentSerializer
+class DataSourceComponentCreateView(CreateAPIView):
+    queryset = DataSourceComponent.objects.all()
+    serializer_class = DataSourceComponentSerializer
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
@@ -51,9 +51,9 @@ class ScenarioComponentCreateView(CreateAPIView):
             safe_name = f"{name}{ext}"
             instance.file.save(safe_name, uploaded_file, save=True)
 
-class ScenarioComponentDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = ScenarioComponent.objects.all()
-    serializer_class = ScenarioComponentSerializer
+class DataSourceComponentDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = DataSourceComponent.objects.all()
+    serializer_class = DataSourceComponentSerializer
     permission_classes = [IsAuthenticated]
 
     def perform_destroy(self, instance):
@@ -68,7 +68,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
-from apiapp.models import ScenarioComponent, MainClass
+from apiapp.models import DataSourceComponent, MainClass
 from apiapp.serializers import MainClassSerializer
 
 
@@ -77,10 +77,9 @@ class EventRecordsView(APIView):
 
     def get(self, request, component_id):
         """Return all records for the given component."""
-        component = get_object_or_404(ScenarioComponent, id=component_id)
+        component = get_object_or_404(DataSourceComponent, id=component_id)
         events = MainClass.objects.filter(
-            data_source_id=component.id,
-            data_source_name=component.data_source
+            data_source=component.data_source
         ).order_by("date_time")
         serializer = MainClassSerializer(events, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -89,7 +88,7 @@ class EventRecordsView(APIView):
         """
         Updates existing rows, creates new ones, and optionally deletes missing ones.
         """
-        component = get_object_or_404(ScenarioComponent, id=component_id)
+        component = get_object_or_404(DataSourceComponent, id=component_id)
         records = request.data
 
         if not isinstance(records, list):
@@ -98,8 +97,7 @@ class EventRecordsView(APIView):
         # Get current records in DB
         existing_records = {
             r.data_set_id: r for r in MainClass.objects.filter(
-                data_source_id=component.id,
-                data_source_name=component.data_source
+                data_source=component.data_source
             )
         }
 
@@ -116,8 +114,7 @@ class EventRecordsView(APIView):
                     data=r,
                     partial=True,
                     context={
-                        "data_source_id": component.id,
-                        "data_source_name": component.data_source
+                        "data_source": component.data_source
                     }
                 )
                 if serializer.is_valid():
@@ -131,8 +128,7 @@ class EventRecordsView(APIView):
                 serializer = MainClassSerializer(
                     data=r,
                     context={
-                        "data_source_id": component.id,
-                        "data_source_name": component.data_source
+                        "data_source": component.data_source
                     }
                 )
                 if serializer.is_valid():
@@ -161,7 +157,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
-from apiapp.models import ScenarioComponent, MainClass
+from apiapp.models import DataSourceComponent, MainClass
 from apiapp.serializers import MainClassSerializer
 from apiapp.utils.pi_utils import generate_web_id_raw, get_value_at_time
 
@@ -170,24 +166,22 @@ class PIRecordsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, component_id):
-        component = get_object_or_404(ScenarioComponent, id=component_id)
+        component = get_object_or_404(DataSourceComponent, id=component_id)
         records = MainClass.objects.filter(
-            data_source_id=component.id,
-            data_source_name=component.data_source
+            data_source=component.data_source
         ).order_by("object_instance__object_instance_name")
         serializer = MainClassSerializer(records, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, component_id):
-        component = get_object_or_404(ScenarioComponent, id=component_id)
+        component = get_object_or_404(DataSourceComponent, id=component_id)
         records = request.data
         if not isinstance(records, list):
             return Response({"error": "Expected a list of records"}, status=400)
 
         existing_records = {
             r.data_set_id: r for r in MainClass.objects.filter(
-                data_source_id=component.id,
-                data_source_name=component.data_source
+                data_source=component.data_source
             )
         }
 
@@ -205,7 +199,7 @@ class PIRecordsView(APIView):
                 obj = existing_records[rec_id]
                 serializer = MainClassSerializer(
                     obj, data=r, partial=True,
-                    context={"data_source_id": component.id, "data_source_name": component.data_source}
+                    context={"data_source": component.data_source}
                 )
                 if serializer.is_valid():
                     obj = serializer.save()
@@ -216,7 +210,7 @@ class PIRecordsView(APIView):
             else:
                 serializer = MainClassSerializer(
                     data=r,
-                    context={"data_source_id": component.id, "data_source_name": component.data_source}
+                    context={"data_source": component.data_source}
                 )
                 if serializer.is_valid():
                     obj = serializer.save()

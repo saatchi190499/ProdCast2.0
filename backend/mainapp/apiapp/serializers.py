@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     ScenarioClass,
     ServersClass,
-    ScenarioComponent,
+    DataSourceComponent,
     ScenarioComponentLink,
     ObjectType,
     ObjectInstance,
@@ -33,9 +33,9 @@ class ServerSerializer(serializers.ModelSerializer):
         ]
 
 
-# ---------- ScenarioComponent ----------
+# ---------- DataSourceComponent ----------
 
-class ScenarioComponentSerializer(serializers.ModelSerializer):
+class DataSourceComponentSerializer(serializers.ModelSerializer):
     created_by = serializers.SlugRelatedField(
         slug_field="username",
         read_only=True
@@ -49,7 +49,7 @@ class ScenarioComponentSerializer(serializers.ModelSerializer):
     file = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
-        model = ScenarioComponent
+        model = DataSourceComponent
         fields = ["id", "name", "description", "data_source", "created_by", "created_date", "last_updated", "file"]
         read_only_fields = ["created_by", "created_date", "last_updated"]
 
@@ -78,7 +78,7 @@ class ScenarioLogSerializer(serializers.ModelSerializer):
 
 # ---------- Связь Scenario ↔ Component ----------
 class ScenarioComponentLinkSerializer(serializers.ModelSerializer):
-    component_detail = ScenarioComponentSerializer(source='component', read_only=True)
+    component_detail = DataSourceComponentSerializer(source='component', read_only=True)
 
     class Meta:
         model = ScenarioComponentLink
@@ -137,7 +137,6 @@ class ObjectTypePropertySerializer(serializers.ModelSerializer):
             'object_type',
             'object_type_property_name',
             'object_type_property_category',
-            'tag',
             'openserver'
         ]
         read_only_fields = ['object_type_property_id']
@@ -158,8 +157,7 @@ class MainClassSerializer(serializers.ModelSerializer):
         model = MainClass
         fields = [
             "data_set_id",
-            "data_source_name",
-            "data_source_id",
+            "data_source",
             "object_type",
             "object_instance",
             "object_type_property",
@@ -169,7 +167,7 @@ class MainClassSerializer(serializers.ModelSerializer):
             "sub_data_source",
             "description"
         ]
-        read_only_fields = ['data_set_id', 'data_source_id', 'data_source_name']
+        read_only_fields = ['data_set_id', 'data_source']
 
     def to_internal_value(self, data):
         data = data.copy()
@@ -198,8 +196,8 @@ class MainClassSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
 
     def create(self, validated_data):
-        validated_data["data_source_id"] = self.context.get("data_source_id")
-        validated_data["data_source_name"] = self.context.get("data_source_name")
+        if "data_source" not in validated_data and self.context.get("data_source") is not None:
+            validated_data["data_source"] = self.context.get("data_source")
 
         # 🕒 Automatically fill date_time if missing
         if not validated_data.get("date_time"):

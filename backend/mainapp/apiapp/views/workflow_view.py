@@ -9,7 +9,7 @@ from datetime import datetime
 import nbformat
 import os
 
-from ..models import Workflow, ScenarioComponent
+from ..models import Workflow, DataSourceComponent
 from ..serializers import WorkflowSerializer, WorkflowListSerializer
 from ..utils.notebook_converter import block_to_python, python_to_block  
 
@@ -30,7 +30,7 @@ class WorkflowViewSet(viewsets.ModelViewSet):
     def get_object(self):
         """Always return a Workflow for the given component, creating it if missing."""
         component_id = self.kwargs.get("component_id")
-        component = get_object_or_404(ScenarioComponent, pk=component_id)
+        component = get_object_or_404(DataSourceComponent, pk=component_id)
         workflow, _ = Workflow.objects.get_or_create(component=component)
         return workflow
     
@@ -351,7 +351,6 @@ def set_var(request):
         return Response({"status": "ok", "name": name, "value": value})
     except Exception as e:
         return Response({"status": "error", "msg": str(e)}, status=400)
-
 
 
 

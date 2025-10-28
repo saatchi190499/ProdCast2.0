@@ -2,8 +2,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from ..models import ScenarioClass, ScenarioComponent, ScenarioComponentLink, DataSource
-from ..serializers import ScenarioClassSerializer, ScenarioComponentSerializer, ScenarioLogSerializer
+from ..models import ScenarioClass, DataSourceComponent, ScenarioComponentLink, DataSource
+from ..serializers import ScenarioClassSerializer, DataSourceComponentSerializer, ScenarioLogSerializer
 from django.shortcuts import get_object_or_404
 
 class ScenarioCreateView(APIView):
@@ -14,8 +14,8 @@ class ScenarioCreateView(APIView):
         "created_by": "...",
         "status": "new",
         "components": [
-            {"data_source_id": 1, "component_id": 5},
-            {"data_source_id": 2, "component_id": 8}
+            {"component_id": 5},
+            {"component_id": 8}
         ]
     }
     """
@@ -34,13 +34,12 @@ class ScenarioCreateView(APIView):
             status = "new",
         )
 
-        # Link one component per data source
+        # Link components by id
         for comp in components:
-            data_source_id = comp.get("data_source_id")
             component_id = comp.get("component_id")
-            if not data_source_id or not component_id:
+            if not component_id:
                 continue
-            component = get_object_or_404(ScenarioComponent, id=component_id, data_source_id=data_source_id)
+            component = get_object_or_404(DataSourceComponent, id=component_id)
             ScenarioComponentLink.objects.create(
                 scenario=scenario,
                 component=component
@@ -57,8 +56,8 @@ class ComponentsByDataSourceView(APIView):
         sources = DataSource.objects.all()
         result = []
         for source in sources:
-            comps = ScenarioComponent.objects.filter(data_source=source)
-            comps_ser = ScenarioComponentSerializer(comps, many=True).data
+            comps = DataSourceComponent.objects.filter(data_source=source)
+            comps_ser = DataSourceComponentSerializer(comps, many=True).data
             result.append({
                 "data_source_id": source.id,
                 "data_source_name": source.data_source_name,

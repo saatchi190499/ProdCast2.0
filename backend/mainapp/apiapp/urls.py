@@ -36,9 +36,9 @@ urlpatterns = [
 
     # --- Data Sources & Components ---
     path("data-sources/", DataSourceListView.as_view(), name="data-sources"),
-    path("data-sources/<str:source_name>/components/", ScenarioComponentsBySourceView.as_view()),
-    path("components/", ScenarioComponentCreateView.as_view(), name="components-create"),
-    path("components/<int:pk>/", ScenarioComponentDetailView.as_view()),
+    path("data-sources/<str:source_name>/components/", DataSourceComponentsBySourceView.as_view()),
+    path("components/", DataSourceComponentCreateView.as_view(), name="components-create"),
+    path("components/<int:pk>/", DataSourceComponentDetailView.as_view()),
     path("components/events/<int:component_id>", EventRecordsView.as_view()),
     path("components/by-data-source/", ComponentsByDataSourceView.as_view(), name="components-by-data-source"),
 

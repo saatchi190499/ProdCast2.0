@@ -5,7 +5,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from .models import (
     UnitSystem, UnitType, UnitDefinition, UnitCategory, UnitSystemCategoryDefinition,
-    DataSource, ScenarioComponent, ServersClass, ScenarioClass, ScenarioComponentLink,
+    DataSource, DataSourceComponent, ServersClass, ScenarioClass, ScenarioComponentLink,
     ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, ScenarioLog, Workflow, 
     WorkflowScheduler, WorkflowSchedulerLog, GapNetworkData
 )
@@ -77,9 +77,9 @@ class DataSourceAdmin(admin.ModelAdmin):
     list_filter = ("data_source_type",)   # adds a sidebar filter
 
 
-# ---------- Scenario Component (универсальный) ----------
-@admin.register(ScenarioComponent)
-class ScenarioComponentAdmin(admin.ModelAdmin):
+# ---------- Data Source Component ----------
+@admin.register(DataSourceComponent)
+class DataSourceComponentAdmin(admin.ModelAdmin):
     list_display = ('name', 'data_source', 'created_date', 'last_updated', 'created_by')
     list_filter = ('data_source', 'created_by')
     search_fields = ('name', 'description')
@@ -206,16 +206,16 @@ class ObjectTypePropertyAdmin(admin.ModelAdmin):
 @admin.register(MainClass)
 class MainClassAdmin(admin.ModelAdmin):
     list_display = (
-        'data_set_id', 'data_source_name', 'data_source_id', 'object_type',
+        'data_set_id', 'data_source', 'object_type',
         'object_instance', 'object_type_property', 'value', 'date_time', 'tag',
     )
     list_filter = (
-        'data_source_name', 'object_type', 'object_instance',
+        'data_source', 'object_type', 'object_instance',
         'object_type_property',  'date_time'
     )
     search_fields = (
-        'data_set_id', 'data_source_id', 'description',
-        'data_source_name__data_source_name', # Search through ForeignKey related names
+        'data_set_id', 'description',
+        'data_source__data_source_name', # Search through ForeignKey related names
         'object_type__object_type_name',
         'object_instance__object_instance_name',
         'object_type_property__object_type_property_name'
@@ -224,7 +224,7 @@ class MainClassAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Data Source Information', {
-            'fields': ('data_source_name', 'data_source_id')
+            'fields': ('data_source',)
         }),
         ('Object Details', {
             'fields': ('object_type', 'object_instance', 'object_type_property')

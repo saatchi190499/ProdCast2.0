@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from apiapp.models import DataSource, ScenarioComponent, MainClass
+from apiapp.models import DataSource, DataSourceComponent, MainClass
 from apiapp.utils.pi_utils import generate_web_id_raw, get_value_at_time, get_time_series
 import pandas as pd
 
@@ -16,10 +16,9 @@ def fetch_pi_value_for_component_row(request, component_id, row_id):
     """
     try:
         pi_source = DataSource.objects.get(data_source_name="PI System")
-        component = ScenarioComponent.objects.get(id=component_id)
+        component = DataSourceComponent.objects.get(id=component_id)
         row = MainClass.objects.get(
-            data_source_name=pi_source,
-            data_source_id=component.id,
+            data_source=pi_source,
             pk=row_id,
         )
 
@@ -60,10 +59,9 @@ def pi_history_for_component_row(request, component_id, row_id):
     """
     try:
         pi_source = DataSource.objects.get(data_source_name="PI System")
-        component = ScenarioComponent.objects.get(id=component_id)
+        component = DataSourceComponent.objects.get(id=component_id)
         row = MainClass.objects.get(
-            data_source_name=pi_source,
-            data_source_id=component.id,
+            data_source=pi_source,
             pk=row_id,
         )
 
