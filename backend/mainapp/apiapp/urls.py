@@ -68,6 +68,7 @@ urlpatterns = [
     path("reset_context/", reset_context),
     path("variables/", list_variables),
     path("petex/introspect/", list_petex_functions, name="petex-introspect"),
+    path("module/<path:path>", get_module, name="get_module"),
     path("delete_var/", delete_var, name="delete-var"),
     path("set_var/", set_var, name="set-var"),
 

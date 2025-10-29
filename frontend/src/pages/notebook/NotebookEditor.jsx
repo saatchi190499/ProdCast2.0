@@ -20,7 +20,8 @@ import {
   CheckSquare,
   RotateCcw,
   StepForward,
-  X, Plus, Code2, Variable, FunctionSquare, Repeat, GitCompare
+  X, Plus, Code2, Variable, FunctionSquare, Repeat, GitCompare,
+  ChevronDown, ChevronRight
 } from "lucide-react";
 
 
@@ -37,6 +38,7 @@ export default function NotebookEditor() {
   const [versions, setVersions] = useState([]);
   const [selectedVersion, setSelectedVersion] = useState("");
   const [activeVersion, setActiveVersion] = useState("");
+  const [autoCollapsePrevious, setAutoCollapsePrevious] = useState(true);
 
   useEffect(() => {
     if (!id) return;
@@ -205,6 +207,21 @@ export default function NotebookEditor() {
     }
   };
 
+  // When a cell's editor gains focus, optionally collapse previous cell
+  const handleCellFocus = (id) => {
+    if (!autoCollapsePrevious) return;
+    setCells((prev) => {
+      const idx = prev.findIndex((c) => c.id === id);
+      if (idx < 0) return prev;
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], collapsed: false };
+      if (idx > 0) {
+        copy[idx - 1] = { ...copy[idx - 1], collapsed: true };
+      }
+      return copy;
+    });
+  };
+
   const runAll = async () => {
     if (!cells.length) return;
     setIsRunning(true);
@@ -282,6 +299,15 @@ export default function NotebookEditor() {
 
         <button className="btn-brand toolbar-item gap-1" onClick={saveNotebook}>
           <Save size={16} /> <span>Save</span>
+        </button>
+
+        <button
+          className="btn-ghost toolbar-item gap-1"
+          onClick={() => setAutoCollapsePrevious((v) => !v)}
+          title="Auto-collapse previous cell when focusing next"
+        >
+          <CheckSquare size={16} style={{ opacity: autoCollapsePrevious ? 1 : 0.35 }} />
+          <span>Auto-collapse prev: {autoCollapsePrevious ? "On" : "Off"}</span>
         </button>
 
         <select
@@ -390,7 +416,8 @@ export default function NotebookEditor() {
                 {/* Cell type label on the left */}
                 <input
                   type="text"
-                  value={cell.label || `${cell.type.toUpperCase()} Cell`}
+                  value={cell.label ?? ""}
+                  placeholder={`${cell.type.toUpperCase()} Cell`}
                   onChange={(e) => updateCell(cell.id, { label: e.target.value })}
                   style={{
                     border: "none",
@@ -399,12 +426,21 @@ export default function NotebookEditor() {
                     fontSize: 13,
                     color: "var(--bs-body-color)",
                     outline: "none",
-                    width: "150px",
+                    width: "50%",
                   }}
                 />
 
                 {/* Compact toolbar on the right */}
                 <div style={{ display: "flex", gap: 4 }}>
+                  {/* Collapse/Expand inline toggle */}
+                  <button
+                    className="btn-ghost"
+                    style={{ padding: "2px 6px", borderRadius: 8 }}
+                    onClick={() => updateCell(cell.id, { collapsed: !cell.collapsed })}
+                    title={cell.collapsed ? "Expand" : "Collapse"}
+                  >
+                    {cell.collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                  </button>
                   <button
                     className="btn-ghost"
                     style={{ padding: "2px 6px", borderRadius: 8 }}
@@ -456,10 +492,11 @@ export default function NotebookEditor() {
 
 
               {/* Cell body */}
-              {cell.type === "code" ? (
+              {!cell.collapsed && (cell.type === "code" ? (
                 <NotebookCell
                   cell={cell}
                   onChange={(updated) => updateCell(cell.id, updated)}
+                  onFocus={() => handleCellFocus(cell.id)}
                   output={out}
                 />
               ) : (
@@ -490,7 +527,7 @@ export default function NotebookEditor() {
                     </div>
                   )}
                 </>
-              )}
+              ))}
 
               {/* Per-cell Add Menu */}
               <div
@@ -635,6 +672,7 @@ export default function NotebookEditor() {
           </div>
         </div>
       )}
+      {/* Expanded overlay removed by request */}
     </div>
   );
 

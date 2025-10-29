@@ -1,21 +1,63 @@
 import Editor from "@monaco-editor/react";
 import { useTheme } from "../../context/ThemeContext";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, XCircle, Terminal, Loader2 } from "lucide-react";
 
-export default function NotebookCell({ cell, onChange, output }) {
+export default function NotebookCell({ cell, onChange, output, onFocus }) {
   const { mode } = useTheme();
+  const editorRef = useRef(null);
+  const [height, setHeight] = useState(200);
+
+  const handleMount = (editor, monaco) => {
+    editorRef.current = editor;
+
+    const updateSize = () => {
+      try {
+        const contentHeight = editor.getContentHeight();
+        const newHeight = Math.max(120, contentHeight + 16);
+        setHeight(newHeight);
+        editor.layout();
+      } catch {}
+    };
+
+    updateSize();
+    const d1 = editor.onDidContentSizeChange(updateSize);
+    const d2 = editor.onDidChangeModelContent((e) => {
+      updateSize();
+      try {
+        const inserted = (e.changes || []).map((c) => c.text).join("");
+        if (inserted && (inserted.includes(".") || inserted.includes(","))) {
+          editor.trigger("keyboard", "editor.action.triggerSuggest", {});
+        }
+      } catch {}
+    });
+    const d3 = editor.onDidFocusEditorText?.(() => onFocus && onFocus());
+    const d4 = editor.onDidFocusEditorWidget?.(() => onFocus && onFocus());
+
+    return () => {
+      d1?.dispose?.();
+      d2?.dispose?.();
+      d3?.dispose?.();
+      d4?.dispose?.();
+    };
+  };
 
   return (
     <div style={{ marginBottom: 8 }}>
       <Editor
-        height="200px"
+        height={height}
         defaultLanguage="python"
         value={cell.source || ""}
         onChange={(val) => onChange({ ...cell, source: val })}
+        onMount={handleMount}
         options={{
           fontSize: 14,
           minimap: { enabled: false },
           wordWrap: "on",
+          automaticLayout: true,
+          scrollBeyondLastLine: false,
+          scrollbar: { vertical: "hidden" },
+          fixedOverflowWidgets: true,
         }}
         theme={mode === "dark" ? "vs-dark" : "light"}
       />

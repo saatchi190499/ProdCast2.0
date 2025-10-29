@@ -53,7 +53,7 @@ class UpdateInstancesView(APIView):
                         filtered_trunks = [trunk for trunk in all_trunks if (trunk.get("uid") if isinstance(trunk, dict) else trunk) in route_uids]
 
                         GapNetworkData.objects.create(
-                            well_uid=well_name,
+                            well_name=well_name,
                             paths=paths,
                             branches=well_branches,
                             trunks=filtered_trunks,

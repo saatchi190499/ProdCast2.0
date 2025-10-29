@@ -158,7 +158,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024  # подстройте под свой трафик
 
 # Логи — с ротацией и на D:
-DJANGO_LOG_DIR = env("DJANGO_LOG_DIR", default=r"D:\Azat\ProdCast2.0\logs")
+DJANGO_LOG_DIR = env("DJANGO_LOG_DIR", default=r"D:\Azat\ProdCast2.0\backend\logs")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
