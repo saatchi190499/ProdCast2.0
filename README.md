@@ -3,6 +3,9 @@
 * Frontend: React 
 * Database: PostgreSQL
 
+## Documentation
+- Model Data Architecture: see `docs/model-data-architecture.md` for entities, relationships, storage tables, constraints, and an ER diagram.
+
 ## Installation & Setup
 ### 1.Clone the repository
    ```
