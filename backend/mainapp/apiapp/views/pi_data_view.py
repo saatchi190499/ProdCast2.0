@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from apiapp.models import DataSourceComponent, MainClass
-from apiapp.utils.pi_utils import generate_web_id_raw, get_value_at_time, get_time_series
+from pi_client import value as pi_value, series as pi_series
 import pandas as pd
 
 
@@ -25,8 +25,7 @@ def fetch_pi_value_for_component_row(request, component_id, row_id):
             return Response({"error": "Row has no PI tag"}, status=400)
 
         iso_time_str = request.data.get("time") or timezone.now().isoformat()
-        web_id = generate_web_id_raw(row.tag, id_type="Attributes")
-        result = get_value_at_time(web_id, iso_time_str)
+        result = pi_value(row.tag, time=iso_time_str, id_type="Attributes")
 
         if not result or "Value" not in result:
             return Response({"error": "No PI value found"}, status=404)
@@ -70,8 +69,7 @@ def pi_history_for_component_row(request, component_id, row_id):
         end = request.GET.get("end", "2025-06-10T00:00:00Z")
         interval = request.GET.get("interval", "1h")
 
-        web_id = generate_web_id_raw(row.tag, id_type="Attributes")
-        df = get_time_series(web_id, start, end, interval)
+        df = pi_series(row.tag, start, end, interval=interval, id_type="Attributes")
 
         return Response(df.to_dict(orient="records"))
 

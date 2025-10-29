@@ -11,7 +11,7 @@ from .views.object_meta_data_view import *
 from .views.unit_view import *
 from .views.workers_view import *
 from .views.workflow_view import *
-from .views.petex_tips_view import *
+from .views.tips_view import *
 from .views.update_gap_instance_view import *
 from .views.server_view import *
 from .views.workflow_schduler_view import *

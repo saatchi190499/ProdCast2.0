@@ -159,7 +159,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 from apiapp.models import DataSourceComponent, MainClass
 from apiapp.serializers import MainClassSerializer
-from apiapp.utils.pi_utils import generate_web_id_raw, get_value_at_time
+from pi_client import value as pi_value
 
 
 class PIRecordsView(APIView):
@@ -222,10 +222,9 @@ class PIRecordsView(APIView):
             # ✅ Auto-fetch latest PI value after save
             if obj.tag:
                 try:
-                    web_id = generate_web_id_raw(obj.tag, id_type="Attributes")
-                    pi_value = get_value_at_time(web_id, "*")  # * means current value
-                    if pi_value and "Value" in pi_value:
-                        obj.value = pi_value["Value"]
+                    latest = pi_value(obj.tag, time="*", id_type="Attributes")
+                    if latest and "Value" in latest:
+                        obj.value = latest["Value"]
                         obj.date_time = now()
                         obj.save(update_fields=["value", "date_time"])
                 except Exception as e:

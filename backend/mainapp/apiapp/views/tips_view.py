@@ -7,6 +7,8 @@ import petex_client.gap as gap
 import petex_client.gap_tools as gap_tools
 import petex_client.resolve as resolve
 from petex_client.server import PetexServer
+import pi_client
+import types
 
 
 @api_view(["GET"])
@@ -15,7 +17,12 @@ def list_petex_functions(request):
         "gap": gap,
         "gap_tools" : gap_tools,
         "resolve": resolve,
-        "srv": PetexServer # auto-opened sessionF
+        "srv": PetexServer,  # auto-opened session
+        # PI helpers: expose only selected functions for tips
+        "pi": types.SimpleNamespace(
+            value=pi_client.value,
+            series=pi_client.series,
+        ),
     }
 
     result = {}
@@ -23,7 +30,7 @@ def list_petex_functions(request):
     for mod_name, mod in modules.items():
         entries = {}
 
-        # 🔹 Top-level functions
+        # Top-level functions
         for name, obj in inspect.getmembers(mod, inspect.isfunction):
             sig = str(inspect.signature(obj))
             doc = inspect.getdoc(obj) or ""
@@ -33,7 +40,7 @@ def list_petex_functions(request):
                 "doc": doc.split("\n")[0],
             }
 
-        # 🔹 Classes and their methods
+        # Classes and their methods
         for cname, cobj in inspect.getmembers(mod, inspect.isclass):
             methods = {}
             for mname, mobj in inspect.getmembers(cobj, inspect.isfunction):
@@ -56,3 +63,4 @@ def list_petex_functions(request):
         result[mod_name] = entries
 
     return Response(result)
+
