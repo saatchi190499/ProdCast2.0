@@ -140,6 +140,7 @@ class MainClassSerializer(serializers.ModelSerializer):
         model = MainClass
         fields = [
             "data_set_id",
+            "scenario",
             "component",
             "data_source",
             "object_type",

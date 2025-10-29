@@ -311,6 +311,15 @@ class ObjectTypeProperty(models.Model):
 # ---------- Main Data ----------
 class MainClass(models.Model):
     data_set_id = models.AutoField(primary_key=True, unique=True)
+    # Optional link to a scenario run that produced this record
+    scenario = models.ForeignKey(
+        'ScenarioClass',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='main_records',
+        verbose_name="Scenario"
+    )
     component = models.ForeignKey(
         DataSourceComponent,
         on_delete=models.CASCADE,
@@ -363,6 +372,7 @@ class MainClass(models.Model):
         verbose_name_plural = "Main Data Records"
         ordering = ["component"]
         indexes = [
+            models.Index(fields=["scenario"]),
             models.Index(fields=["component"]),
             models.Index(fields=["object_type", "object_type_property"]),
         ]
