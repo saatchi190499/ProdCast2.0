@@ -25,58 +25,58 @@
   - FKs: `unit_system`, `unit_category`, `unit_definition`. Constraint: unique triple.
 
 - DataSource (`backend/mainapp/apiapp/models.py:135`)
-  - Logical source of data: INPUT, OUTPUT, PROCESS.
+  - Logical source of data: SOURCE, FORECAST, WORKFLOW.
   - Key: `data_source_name` (unique), `data_source_type` (choices).
 
 - DataSourceComponent (`backend/mainapp/apiapp/models.py:160`)
   - Named component under a `DataSource`; optional file attachment; creator/audit.
   - FKs: `data_source`, `created_by` (Django `User`). Ordered by `-created_date`.
 
-- ScenarioClass (`backend/mainapp/apiapp/models.py:214`)
+- ScenarioClass (`backend/mainapp/apiapp/models.py:181`)
   - A scenario with lifecycle fields, approval, and audit.
   - FKs: `created_by`. Related logs via `ScenarioLog`.
 
-- ScenarioLog (`backend/mainapp/apiapp/models.py:240`)
+- ScenarioLog (`backend/mainapp/apiapp/models.py:206`)
   - Timestamped messages and progress for a scenario.
   - FK: `scenario` (cascade), ordered by `timestamp` desc.
 
-- ScenarioComponentLink (`backend/mainapp/apiapp/models.py:252`)
+- ScenarioComponentLink (`backend/mainapp/apiapp/models.py:218`)
   - Many-to-many association between `ScenarioClass` and `DataSourceComponent`.
   - Constraint: unique (`scenario`, `component`) and validation to prevent multiple components from the same `data_source` per scenario.
 
-- ObjectType (`backend/mainapp/apiapp/models.py:284`)
+- ObjectType (`backend/mainapp/apiapp/models.py:250`)
   - Canonical object taxonomy root (e.g., Well, Compressor).
   - Key: `object_type_id`, `object_type_name` (unique).
 
-- ObjectInstance (`backend/mainapp/apiapp/models.py:298`)
+- ObjectInstance (`backend/mainapp/apiapp/models.py:264`)
   - Concrete instance under an `ObjectType` (e.g., Well-12).
   - FKs: `object_type`. Key: `object_instance_name` (unique).
 
-- ObjectTypeProperty (`backend/mainapp/apiapp/models.py:313`)
+- ObjectTypeProperty (`backend/mainapp/apiapp/models.py:279`)
   - Property definition per object type (name, category, external tag `openserver`).
   - FKs: `object_type`, optional `unit_category`, computed `unit` auto-set to base `UnitDefinition` of the category’s `UnitType`.
   - Constraint: unique (`object_type`, `object_type_property_name`).
 
-- MainClass (`backend/mainapp/apiapp/models.py:346`)
+- MainClass (`backend/mainapp/apiapp/models.py:312`)
   - Fact table for measurements/events: value at `date_time` for (`object_type`, `object_instance`, `object_type_property`) optionally scoped by `component` (thus `data_source`).
-  - FKs: `component`, `object_type`, `object_instance`, `object_type_property` (via `ChainedForeignKey` constrained by `object_type`).
+  - FKs: `scenario` (optional), `component`, `object_type`, `object_instance`, `object_type_property` (via `ChainedForeignKey` constrained by `object_type`).
   - Fields: `value` (string), `date_time`, optional `tag`, `description`.
   - Properties: `sub_data_source` derived from property category; `data_source` derived from component.
-  - Indexes: (`component`), and (`object_type`, `object_type_property`). Pre-save validator ensures `object_instance.object_type == object_type`.
+  - Indexes: (`scenario`), (`component`), and (`object_type`, `object_type_property`). Pre-save validator ensures `object_instance.object_type == object_type`.
 
-- Workflow (`backend/mainapp/apiapp/models.py:420`)
+- Workflow (`backend/mainapp/apiapp/models.py:396`)
   - One-to-one with `DataSourceComponent`. Stores notebook cell JSON and exported `code_file`/`ipynb_file` paths. `python_code` convenience property.
 
-- WorkflowScheduler (`backend/mainapp/apiapp/models.py:450`)
+- WorkflowScheduler (`backend/mainapp/apiapp/models.py:426`)
   - Cron-like scheduling for a `Workflow`; tracks `next_run`, `last_run`, `is_active`, audit.
 
-- WorkflowSchedulerLog (`backend/mainapp/apiapp/models.py:474`)
+- WorkflowSchedulerLog (`backend/mainapp/apiapp/models.py:450`)
   - Status log entries per schedule with message and timestamp.
 
-- WorkflowRun (`backend/mainapp/apiapp/models.py:493`)
+- WorkflowRun (`backend/mainapp/apiapp/models.py:469`)
   - Execution record for a workflow (optionally linked to a scheduler): Celery `task_id`, start/finish times, status, stdout/err.
 
-- GapNetworkData (`backend/mainapp/apiapp/models.py:517`)
+- GapNetworkData (`backend/mainapp/apiapp/models.py:493`)
   - Stores global network topology for a well: `paths`, `branches`, `trunks` JSON; audit timestamp.
 
 **Relationships**
@@ -101,13 +101,13 @@
 - Audit
   - Common: `created_date`/`modified_date`, some models carry `created_by` and `modified_by` or `is_active`.
 - Indexes
-  - `MainClass` has indexes on `component` and (`object_type`, `object_type_property`) for common query patterns.
+  - `MainClass` has indexes on `scenario`, `component` and (`object_type`, `object_type_property`) for common query patterns.
 - Files
   - `DataSourceComponent.file`, `Workflow.code_file`, `Workflow.ipynb_file` store paths under `media/` per Django configuration; workflow paths are keyed by component id.
 
 **Access Patterns**
 - Fact queries
-  - Filter `MainClass` by `component` and property tuple (`object_type`, `object_type_property`); time-range over `date_time` when present.
+  - Filter `MainClass` by optional `scenario`, `component`, and property tuple (`object_type`, `object_type_property`); time-range over `date_time` when present.
   - Derive `data_source` from `component` without extra join via property.
 - Scenario data
   - For a scenario, join `ScenarioComponentLink` to list components; validation prevents duplicates by data source.
@@ -158,6 +158,7 @@ erDiagram
 
   ScenarioClass ||--o{ ScenarioComponentLink : links
   DataSourceComponent ||--o{ ScenarioComponentLink : linked
+  ScenarioClass ||--o{ ScenarioLog : logs
 
   DataSourceComponent ||--|| Workflow : has
   Workflow ||--o{ WorkflowScheduler : schedules
@@ -176,6 +177,15 @@ erDiagram
   MainClass }o--|| ObjectType : type
   MainClass }o--|| ObjectInstance : instance
   MainClass }o--|| ObjectTypeProperty : property
+  MainClass }o..|| ScenarioClass : scenario
+
+  GapNetworkData {
+    string well_name
+    json paths
+    json branches
+    json trunks
+    datetime created_at
+  }
 ```
 
 Rendered Diagram
