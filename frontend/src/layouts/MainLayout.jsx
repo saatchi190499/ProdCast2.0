@@ -19,7 +19,10 @@ import {
   FiSettings,
   FiChevronRight,
   FiChevronDown,
-  FiClock
+  FiClock,
+  FiActivity,
+  FiLayers,
+  FiPackage
 } from "react-icons/fi";
 import { LuWorkflow } from "react-icons/lu";
 import api from "../utils/axiosInstance";
@@ -66,6 +69,7 @@ export default function MainLayout() {
   // ---------------- derived ----------------
   const isExpanded = isPinned ? true : !collapsed;
   const shouldDock = isPinned || isExpanded;
+  const isCollapsedUnpinned = !isPinned && collapsed;
 
   // ---------------- effects ----------------
   useEffect(() => {
@@ -216,11 +220,22 @@ export default function MainLayout() {
             const type = "FORECAST";
             const isOpen = openMenus[type];
             const label = t("forecast") || "Forecast";
-            const icon = <FiBarChart2 />;
+            const path = location.pathname.toLowerCase();
+            const isAnyActive =
+              path.startsWith("/forecast") ||
+              path.startsWith("/scenarios") ||
+              path.startsWith("/components/events") ||
+              path.startsWith("/components/pi");
+            let icon = <FiBarChart2 />;
+            if (isCollapsedUnpinned && isAnyActive) {
+              if (path.includes("/models")) icon = <FiPackage />;
+              else if (path.includes("/events") || path.startsWith("/components/events")) icon = <FiActivity />;
+              else if (path.startsWith("/scenarios")) icon = <FiLayers />;
+            }
             return (
               <div key={type}>
                 <div
-                  className="sidebar-link"
+                  className={`sidebar-link ${isCollapsedUnpinned && isAnyActive ? "active" : ""}`}
                   role="button"
                   onClick={() => toggleMenu(type)}
                 >
@@ -239,38 +254,53 @@ export default function MainLayout() {
 
                 {!collapsed && isOpen && (
                   <div className="inputs-dd">
-                    {/* Scenarios entry inside Forecast */}
+                    {[...groupSources]
+                      .sort((a, b) => {
+                        const order = { Models: 0, Events: 1 };
+                        const ai = order[a.data_source_name] ?? 99;
+                        const bi = order[b.data_source_name] ?? 99;
+                        return ai - bi;
+                      })
+                      .map(ds => (
+                        <div key={ds.id}>
+                          <NavLink
+                            to={`/forecast/${ds.data_source_name}`}
+                            className={({ isActive }) =>
+                              `inputs-dd-item ${isActive ? "active" : ""}`
+                            }
+                            onClick={() => handleLoadComponents(ds)}
+                          >
+                            {ds.data_source_name === "Models" ? (
+                              <FiPackage style={{ marginRight: 6 }} />
+                            ) : (
+                              <FiActivity style={{ marginRight: 6 }} />
+                            )}
+                            {ds.data_source_name}
+                          </NavLink>
+
+                          {components[ds.data_source_name] &&
+                            components[ds.data_source_name].map(comp => (
+                              <NavLink
+                                key={comp.id}
+                                to={componentRouteFor(ds.data_source_name, comp.id)}
+                                className={({ isActive }) =>
+                                  `inputs-dd-subitem ${isActive ? "active" : ""}`
+                                }
+                              />
+                            ))}
+                        </div>
+                      ))}
+
+                    {/* Scenario at end */}
                     <NavLink
                       to="/scenarios"
                       className={({ isActive }) =>
                         `inputs-dd-item ${isActive ? "active" : ""}`
                       }
                     >
+                      <FiLayers style={{ marginRight: 6 }} />
                       {t("scenarios")}
                     </NavLink>
-
-                    {groupSources.map((ds) => (
-                      <div key={ds.id}>
-                        <NavLink
-                          to={`/forecast/${ds.data_source_name}`}
-                          className={({ isActive }) =>
-                            `inputs-dd-item ${isActive ? "active" : ""}`
-                          }
-                          onClick={() => handleLoadComponents(ds)}
-                        >
-                          {ds.data_source_name}
-                        </NavLink>
-
-                        {components[ds.data_source_name] &&
-                          components[ds.data_source_name].map((comp) => (
-                            <NavLink
-                              key={comp.id}
-                              to={componentRouteFor(ds.data_source_name, comp.id)}
-                              className="inputs-dd-subitem"
-                            />
-                          ))}
-                      </div>
-                    ))}
                   </div>
                 )}
               </div>
@@ -286,11 +316,13 @@ export default function MainLayout() {
             if (groupSources.length === 0) return null;
             const isOpen = openMenus[type];
             const label = t("source"); // translation updated to "Data Source"
+            const path = location.pathname.toLowerCase();
+            const isAnyActive = path.startsWith("/source") || path.startsWith("/input");
             const icon = <FiDatabase />;
             return (
               <div key={type}>
                 <div
-                  className="sidebar-link"
+                  className={`sidebar-link ${isCollapsedUnpinned && isAnyActive ? "active" : ""}`}
                   role="button"
                   onClick={() => toggleMenu(type)}
                 >
@@ -309,28 +341,30 @@ export default function MainLayout() {
 
                 {!collapsed && isOpen && (
                   <div className="inputs-dd">
-                    {groupSources.map((ds) => (
-                      <div key={ds.id}>
-                        <NavLink
-                          to={`/source/${ds.data_source_name}`}
-                          className={({ isActive }) =>
-                            `inputs-dd-item ${isActive ? "active" : ""}`
-                          }
-                          onClick={() => handleLoadComponents(ds)}
-                        >
-                          {ds.data_source_name}
-                        </NavLink>
+                        {groupSources.map((ds) => (
+                          <div key={ds.id}>
+                            <NavLink
+                              to={`/source/${ds.data_source_name}`}
+                              className={({ isActive }) =>
+                                `inputs-dd-item ${isActive ? "active" : ""}`
+                              }
+                              onClick={() => handleLoadComponents(ds)}
+                            >
+                              {ds.data_source_name}
+                            </NavLink>
 
                         {components[ds.data_source_name] &&
                           components[ds.data_source_name].map((comp) => (
                             <NavLink
                               key={comp.id}
                               to={componentRouteFor(ds.data_source_name, comp.id)}
-                              className="inputs-dd-subitem"
+                              className={({ isActive }) =>
+                                `inputs-dd-subitem ${isActive ? "active" : ""}`
+                              }
                             />
                           ))}
-                      </div>
-                    ))}
+                          </div>
+                        ))}
                   </div>
                 )}
               </div>
@@ -360,12 +394,14 @@ export default function MainLayout() {
 
             const isOpen = openMenus[type];
             const label = t("results");
+            const path = location.pathname.toLowerCase();
+            const isAnyActive = path.startsWith("/output");
             const icon = <FiBarChart2 />;
 
             return (
               <div key={type}>
                 <div
-                  className="sidebar-link"
+                  className={`sidebar-link ${isCollapsedUnpinned && isAnyActive ? "active" : ""}`}
                   role="button"
                   onClick={() => toggleMenu(type)}
                 >
@@ -388,6 +424,7 @@ export default function MainLayout() {
                       <div key={ds.id}>
                         <NavLink
                           to={`/output/${ds.data_source_name}`}
+                          end={!isPinned && collapsed}
                           className={({ isActive }) =>
                             `inputs-dd-item ${isActive ? "active" : ""}`
                           }
@@ -401,7 +438,9 @@ export default function MainLayout() {
                             <NavLink
                               key={comp.id}
                               to={`/output/${ds.data_source_name}/${comp.name}`}
-                              className="inputs-dd-subitem"
+                              className={({ isActive }) =>
+                                `inputs-dd-subitem ${isActive ? "active" : ""}`
+                              }
                             />
                           ))}
                       </div>
@@ -583,4 +622,3 @@ function FooterActions({ isExpanded, onLogout, userName, t }) {
     </div>
   );
 }
-
