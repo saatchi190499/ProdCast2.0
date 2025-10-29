@@ -11,7 +11,7 @@
     "profile": "Профиль",
     "admin_panel": "Админ-панель",
     "theme": "Тема",
-    "inputs": "Входные данные",
+    "source": "Источник",
     "models": "Модели",
     "events": "События",
     "scenarios": "Сценарии",
@@ -92,7 +92,9 @@
     "loading": "Загрузка...",
     "failedLoadWorkers": "Не удалось загрузить рабочих",
     "nothingSelected": "Ничего не выбрано",
-    "processes": "Процессы",
-    "equip_management": "Управление оборудованием"
+    "workflow": "Процессы",
+    "equip_management": "Управление оборудованием",
+    "scheduler": "Задачи",
+    "forecast": "Прогноз"
 
 }

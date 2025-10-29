@@ -8,12 +8,10 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # --- DataSources (с типами) ---
         data_sources = [
-            ("Models", "INPUT"),
-            ("Events", "INPUT"),
-            ("PI System", "INPUT"),
-            ("Workflows", "PROCESS"),
-            ("Workflow Results", "OUTPUT"),
-            ("Forecast Results", "OUTPUT"),
+            ("Models", "FORECAST"),
+            ("Events", "FORECAST"),
+            ("PI System", "SOURCE"),
+            ("Workflows", "WORKFLOW"),
         ]
         for name, dtype in data_sources:
             DataSource.objects.get_or_create(

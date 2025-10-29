@@ -11,7 +11,7 @@
     "profile": "Profile",
     "admin_panel": "Admin Panel",
     "theme": "Theme",
-    "inputs": "Inputs",
+    "source": "Source",
     "models": "Models",
     "events": "Events",
     "scenarios": "Scenarios",
@@ -91,9 +91,10 @@
     "loading": "Loading...",
     "failedLoadWorkers": "Failed to load workers",
     "nothingSelected": "Nothing selected",
-    "processes": "Processes",
+    "workflow": "Workflow",
     "equip_management": "Equipment Management",
-    "scheduler": "Scheduler"
+    "scheduler": "Scheduler",
+    "forecast": "Forecast"
     
 
 }

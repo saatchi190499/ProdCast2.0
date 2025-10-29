@@ -15,7 +15,6 @@ import {
   FiGlobe,
   FiHome,
   FiDatabase,
-  FiLayers,
   FiBarChart2,
   FiSettings,
   FiChevronRight,
@@ -44,10 +43,22 @@ export default function MainLayout() {
 
   // Track open menus
   const [openMenus, setOpenMenus] = useState({
-    INPUT: false,
+    FORECAST: false,
+    SOURCE: false,
     OUTPUT: false,
-    PROCESS: false,
   });
+
+  // Map specific data source names to custom sidebar groups
+  const NAME_TO_GROUP = useMemo(
+    () => ({
+      "Models": "FORECAST",
+      "Events": "FORECAST",
+      "PI System": "SOURCE",
+      "Internal": "SOURCE",
+      "Workflows": "WORKFLOW",
+    }),
+    []
+  );
 
   const hoverTimer = useRef(null);
   const leaveTimer = useRef(null);
@@ -76,9 +87,9 @@ export default function MainLayout() {
   useEffect(() => {
     const path = location.pathname.toLowerCase();
     setOpenMenus({
-      INPUT: path.startsWith("/input"),
+      FORECAST: path.startsWith("/forecast") || path.startsWith("/scenarios"),
+      SOURCE: path.startsWith("/source") || path.startsWith("/input"), // keep legacy
       OUTPUT: path.startsWith("/output"),
-      PROCESS: path.startsWith("/process"),
     });
   }, [location]);
 
@@ -107,7 +118,7 @@ export default function MainLayout() {
     clearTimeout(hoverTimer.current);
     leaveTimer.current = setTimeout(() => {
       setCollapsed(true);
-      setOpenMenus({ INPUT: false, OUTPUT: false, PROCESS: false });
+      setOpenMenus({ FORECAST: false, SOURCE: false, OUTPUT: false });
     }, 120);
   };
 
@@ -196,20 +207,18 @@ export default function MainLayout() {
             collapsed={collapsed}
           />
 
-          {/* Groups in custom order */}
-          {["INPUT", "PROCESS"].map((type) => {
+          {/* Forecast group */}
+          {(() => {
             const groupSources = dataSources.filter(
-              (ds) => ds.data_source_type === type
+              (ds) => NAME_TO_GROUP[ds.data_source_name] === "FORECAST"
             );
             if (groupSources.length === 0) return null;
-
+            const type = "FORECAST";
             const isOpen = openMenus[type];
-            const label = type === "INPUT" ? t("inputs") : t("processes");
-            const icon = type === "INPUT" ? <FiDatabase /> : <LuWorkflow />;
-
+            const label = t("forecast") || "Forecast";
+            const icon = <FiBarChart2 />;
             return (
               <div key={type}>
-                {/* Group header */}
                 <div
                   className="sidebar-link"
                   role="button"
@@ -228,13 +237,22 @@ export default function MainLayout() {
                   </div>
                 </div>
 
-                {/* Dropdown items */}
                 {!collapsed && isOpen && (
                   <div className="inputs-dd">
+                    {/* Scenarios entry inside Forecast */}
+                    <NavLink
+                      to="/scenarios"
+                      className={({ isActive }) =>
+                        `inputs-dd-item ${isActive ? "active" : ""}`
+                      }
+                    >
+                      {t("scenarios")}
+                    </NavLink>
+
                     {groupSources.map((ds) => (
                       <div key={ds.id}>
                         <NavLink
-                          to={`/${type.toLowerCase()}/${ds.data_source_name}`}
+                          to={`/forecast/${ds.data_source_name}`}
                           className={({ isActive }) =>
                             `inputs-dd-item ${isActive ? "active" : ""}`
                           }
@@ -257,16 +275,75 @@ export default function MainLayout() {
                 )}
               </div>
             );
-          })}
+          })()}
 
-          {/* Scenarios */}
+          {/* Data Source group (formerly Inputs) */}
+          {(() => {
+            const type = "SOURCE";
+            const groupSources = dataSources.filter(
+              (ds) => NAME_TO_GROUP[ds.data_source_name] === type
+            );
+            if (groupSources.length === 0) return null;
+            const isOpen = openMenus[type];
+            const label = t("source"); // translation updated to "Data Source"
+            const icon = <FiDatabase />;
+            return (
+              <div key={type}>
+                <div
+                  className="sidebar-link"
+                  role="button"
+                  onClick={() => toggleMenu(type)}
+                >
+                  <div className="link-inner">
+                    <span className="icon">{icon}</span>
+                    {!collapsed && (
+                      <>
+                        <span className="label">{label}</span>
+                        <span className="ms-auto caret">
+                          {isOpen ? <FiChevronDown /> : <FiChevronRight />}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {!collapsed && isOpen && (
+                  <div className="inputs-dd">
+                    {groupSources.map((ds) => (
+                      <div key={ds.id}>
+                        <NavLink
+                          to={`/source/${ds.data_source_name}`}
+                          className={({ isActive }) =>
+                            `inputs-dd-item ${isActive ? "active" : ""}`
+                          }
+                          onClick={() => handleLoadComponents(ds)}
+                        >
+                          {ds.data_source_name}
+                        </NavLink>
+
+                        {components[ds.data_source_name] &&
+                          components[ds.data_source_name].map((comp) => (
+                            <NavLink
+                              key={comp.id}
+                              to={componentRouteFor(ds.data_source_name, comp.id)}
+                              className="inputs-dd-subitem"
+                            />
+                          ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+
           <SidebarLink
-            to="/scenarios"
-            icon={<FiLayers />}
-            label={t("scenarios")}
+            to="/workflow/Workflows"
+            icon={<LuWorkflow />}
+            label={t("workflow")}
             collapsed={collapsed}
           />
-
           <SidebarLink
             to="/scheduler"
             icon={<FiClock />}
@@ -506,3 +583,4 @@ function FooterActions({ isExpanded, onLogout, userName, t }) {
     </div>
   );
 }
+
