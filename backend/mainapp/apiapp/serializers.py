@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import (
     ScenarioClass,
-    ServersClass,
     DataSourceComponent,
     ScenarioComponentLink,
     ObjectType,
@@ -16,22 +15,6 @@ from .models import (
     WorkflowRun,
 )
 from django.utils.timezone import now
-
-# ---------- Servers ----------
-class ServerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ServersClass
-        fields = [
-            "server_id",
-            "server_name",
-            "server_url",
-            "server_status",
-            "is_active",
-            "allow_scenarios",
-            "allow_workflows",
-            "description",
-        ]
-
 
 # ---------- DataSourceComponent ----------
 
@@ -64,7 +47,6 @@ class ScenarioClassSerializer(serializers.ModelSerializer):
             'status',
             'start_date',
             'end_date',
-            'server',
             'created_by',
             'created_date',
             'is_approved',

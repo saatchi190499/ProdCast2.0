@@ -5,7 +5,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from .models import (
     UnitSystem, UnitType, UnitDefinition, UnitCategory, UnitSystemCategoryDefinition,
-    DataSource, DataSourceComponent, ServersClass, ScenarioClass, ScenarioComponentLink,
+    DataSource, DataSourceComponent, ScenarioClass, ScenarioComponentLink,
     ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, ScenarioLog, Workflow, 
     WorkflowScheduler, WorkflowSchedulerLog, GapNetworkData
 )
@@ -97,28 +97,7 @@ class DataSourceComponentAdmin(admin.ModelAdmin):
 
 
 # ---------- Servers ----------
-@admin.register(ServersClass)
-class ServersClassAdmin(admin.ModelAdmin):
-    # Using 'all_objects' manager to show all servers (active and inactive) in admin
-    # To use this, you'd typically override get_queryset or define a custom filter.
-    # For a basic display, 'objects' (ActiveManager) is default, so it shows only active.
-    # If you want to see all, you can explicitly use:
-    # def get_queryset(self, request):
-    #     return self.model.all_objects.get_queryset()
-    list_display = ('server_name', 'server_url', 'server_status', 'is_active', 'created_date', 'created_by')
-    list_filter = ('is_active', 'server_status', 'created_by')
-    search_fields = ('server_name', 'server_url', 'description')
-    readonly_fields = ('created_date', 'created_by') # created_by is a ForeignKey to User
-
-    actions = ['make_inactive', 'make_active']
-
-    @admin.action(description='Mark selected servers as inactive')
-    def make_inactive(self, request, queryset):
-        queryset.update(is_active=False)
-
-    @admin.action(description='Mark selected servers as active')
-    def make_active(self, request, queryset):
-        queryset.update(is_active=True)
+# Removed: ServersClass and associated admin as server registry is deprecated
 
 # ---------- Scenario ----------
 @admin.register(ScenarioClass)
@@ -126,7 +105,6 @@ class ScenarioClassAdmin(admin.ModelAdmin):
     list_display = (
         'scenario_name', 
         'status', 
-        'server', 
         'task_id',  # добавлено
         'is_approved', 
         'start_date', 
@@ -134,13 +112,13 @@ class ScenarioClassAdmin(admin.ModelAdmin):
         'created_date', 
         'created_by'
     )
-    list_filter = ('status', 'server', 'is_approved', 'created_by')
+    list_filter = ('status', 'is_approved', 'created_by')
     search_fields = ('scenario_name', 'description')
     readonly_fields = ('created_date', 'created_by', 'task_id')  # task_id readonly
 
     fieldsets = (
         (None, {
-            'fields': ('scenario_name', 'description', 'status', 'task_id', 'server', 'is_approved')
+            'fields': ('scenario_name', 'description', 'status', 'task_id', 'is_approved')
         }),
         ('Date Range', {
             'fields': ('start_date', 'end_date')

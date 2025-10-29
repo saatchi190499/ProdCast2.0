@@ -177,39 +177,6 @@ class DataSourceComponent(models.Model):
         ordering = ["-created_date"]
 
 
-# ---------- Servers ----------
-class ActiveManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(is_active=True)
-
-class ServersClass(models.Model):
-    server_id = models.AutoField(primary_key=True)
-    server_name = models.CharField(max_length=50, unique=True)
-    server_url = models.CharField(max_length=250, unique=True)
-    server_status = models.CharField(max_length=50, blank=True)
-
-    # admin settings
-    allow_scenarios = models.BooleanField(default=True)
-    allow_workflows = models.BooleanField(default=True)
-
-    description = models.TextField("Description", blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    created_date = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True)
-
-    objects = ActiveManager()
-
-    def __str__(self):
-        return self.server_name
-
-    class Meta:
-        db_table = 'apiapp_servers'
-        verbose_name = "Server"
-        verbose_name_plural = "Servers"
-        ordering = ["-created_date"]
-
-
-
 # ---------- Scenario ----------
 class ScenarioClass(models.Model):
     scenario_id = models.AutoField(primary_key=True)
@@ -222,7 +189,6 @@ class ScenarioClass(models.Model):
     end_date = models.DateTimeField(null=True, blank=True)
 
     task_id = models.CharField(max_length=255, blank=True, null=True)
-    server = models.ForeignKey(ServersClass, on_delete=models.SET_NULL, null=True, verbose_name="Server")
     is_approved = models.BooleanField(default=False)
 
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="scenarios")

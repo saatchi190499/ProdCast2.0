@@ -32,13 +32,9 @@
   - Named component under a `DataSource`; optional file attachment; creator/audit.
   - FKs: `data_source`, `created_by` (Django `User`). Ordered by `-created_date`.
 
-- ServersClass (`backend/mainapp/apiapp/models.py:185`)
-  - External server registry, with feature flags for scenarios/workflows.
-  - Keys: `server_id`, `server_name` (unique), `server_url` (unique), `is_active` filter via custom manager.
-
 - ScenarioClass (`backend/mainapp/apiapp/models.py:214`)
-  - A scenario with lifecycle fields, server, approval, and audit.
-  - FKs: `server`, `created_by`. Related logs via `ScenarioLog`.
+  - A scenario with lifecycle fields, approval, and audit.
+  - FKs: `created_by`. Related logs via `ScenarioLog`.
 
 - ScenarioLog (`backend/mainapp/apiapp/models.py:240`)
   - Timestamped messages and progress for a scenario.

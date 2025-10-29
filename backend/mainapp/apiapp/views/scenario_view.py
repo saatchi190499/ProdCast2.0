@@ -67,7 +67,7 @@ class ComponentsByDataSourceView(APIView):
     
 class ScenarioListView(APIView):
     def get(self, request):
-        scenarios = ScenarioClass.objects.select_related("created_by", "server").all()
+        scenarios = ScenarioClass.objects.select_related("created_by").all()
         result = []
         for scenario in scenarios:
             links = ScenarioComponentLink.objects.filter(scenario=scenario).select_related("component")
@@ -87,7 +87,6 @@ class ScenarioListView(APIView):
                 "status": scenario.status,
                 "start_date": scenario.start_date,
                 "end_date": scenario.end_date,
-                "server": getattr(scenario.server, "server_name", None),
                 "is_approved": scenario.is_approved,
                 "created_by": getattr(scenario.created_by, "username", None),
                 "created_date": scenario.created_date,

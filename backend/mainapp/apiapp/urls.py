@@ -13,14 +13,12 @@ from .views.workers_view import *
 from .views.workflow_view import *
 from .views.tips_view import *
 from .views.update_gap_instance_view import *
-from .views.server_view import *
 from .views.workflow_schduler_view import *
 from .views.pi_data_view import *
 
 # ---------------- Router endpoints ----------------
 router = DefaultRouter()
 router.register(r"components/workflows", WorkflowViewSet, basename="workflow")
-router.register(r"servers", ServerViewSet, basename="servers")
 router.register(r"workflow-schedulers", WorkflowSchedulerViewSet, basename="workflow-schedulers")
 router.register(r"workflow-scheduler-logs", WorkflowSchedulerLogViewSet, basename="workflow-scheduler-logs")
 router.register(r"workflow-runs", WorkflowRunViewSet, basename="workflow-runs")
