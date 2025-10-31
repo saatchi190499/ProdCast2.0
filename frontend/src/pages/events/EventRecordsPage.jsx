@@ -214,8 +214,24 @@ export default function EventRecordsPage() {
           const unit = getUnitForProperty(cleanRow.object_type_property);
           const category = getCategoryForProperty(cleanRow.object_type, cleanRow.object_type_property);
 
+          // Convert numeric CSV value from selected-unit display to base units for storage
+          let value = cleanRow.value;
+          const numericCandidate = typeof value === 'string' ? value.replace(",", ".") : value;
+          if (
+            cleanRow.object_type_property !== "Route" &&
+            numericCandidate !== "" &&
+            numericCandidate !== null &&
+            !isNaN(Number(numericCandidate))
+          ) {
+            const { scale, offset } = getConversionForProperty(cleanRow.object_type_property);
+            const displayValue = Number(numericCandidate);
+            const baseValue = scale !== 0 ? ((displayValue - offset) / scale) : displayValue;
+            value = baseValue;
+          }
+
           return {
             ...cleanRow,
+            value,
             unit,
             sub_data_source: category, // <-- override whatever came from CSV
           };
@@ -235,19 +251,35 @@ export default function EventRecordsPage() {
   };
 
   const handleExportCSV = () => {
+    // Export values in the currently selected unit system and include unit column
     const exportKeys = [
       "date_time",
       "object_type",
       "object_instance",
       "object_type_property",
       "value",
+      "unit",
       "sub_data_source",
       "description"
     ];
     const header = exportKeys.join(",");
-    const rows = records.map(r =>
-      exportKeys.map(k => `"${String(r[k] ?? "").replace(/"/g, '""')}"`).join(",")
-    );
+    const rows = records.map((r) => {
+      let displayValue = r.value;
+      if (
+        r.object_type_property !== "Route" &&
+        displayValue !== "" &&
+        displayValue !== null &&
+        !isNaN(Number(displayValue))
+      ) {
+        const { scale, offset } = getConversionForProperty(r.object_type_property);
+        displayValue = Number(displayValue) * scale + offset;
+      }
+      const unit = getUnitForProperty(r.object_type_property);
+      const rowObj = { ...r, value: displayValue, unit };
+      return exportKeys
+        .map((k) => `"${String(rowObj[k] ?? "").replace(/"/g, '""')}"`)
+        .join(",");
+    });
     const csv = [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     saveAs(blob, `Event_${componentName}_${id}.csv`);

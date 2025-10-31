@@ -15,6 +15,7 @@ from .views.tips_view import *
 from .views.update_gap_instance_view import *
 from .views.workflow_schduler_view import *
 from .views.pi_data_view import *
+from .views.visual_analysis_view import *
 
 # ---------------- Router endpoints ----------------
 router = DefaultRouter()
@@ -76,5 +77,8 @@ urlpatterns = [
     path("components/pi-records/<int:component_id>/row/<int:row_id>/fetch_value/", fetch_pi_value_for_component_row),
     path("components/pi-records/<int:component_id>/row/<int:row_id>/history/", pi_history_for_component_row),
     path("components/pi-records/<int:component_id>/", PIRecordsView.as_view()),
+
+    # --- Visual Analysis ---
+    path("components/visual-analysis/<int:component_id>/config/", VisualAnalysisConfigView.as_view()),
 
 ]

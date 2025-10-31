@@ -137,6 +137,7 @@ class DataSource(models.Model):
         ("SOURCE", "Source"),
         ("FORECAST", "Forecast"),
         ("WORKFLOW", "Workflow"),
+        ("OUTPUT", "Output"),
     ]
 
     data_source_name = models.CharField("Data Source", max_length=50, unique=True)
@@ -497,3 +498,22 @@ class GapNetworkData(models.Model):
     branches = models.JSONField()
     trunks = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+# ---------- Visual Analysis ----------
+class VisualAnalysisConfig(models.Model):
+    component = models.OneToOneField(
+        DataSourceComponent,
+        on_delete=models.CASCADE,
+        related_name="visual_config",
+    )
+    charts = models.JSONField(default=list, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'apiapp_visual_analysis_config'
+        verbose_name = 'Visual Analysis Config'
+        verbose_name_plural = 'Visual Analysis Configs'
+
+    def __str__(self):
+        return f"VisualAnalysis for {self.component.name}"

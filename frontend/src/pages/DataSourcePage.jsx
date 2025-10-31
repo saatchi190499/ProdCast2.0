@@ -132,6 +132,11 @@ export default function DataSourcePage() {
         return;
       }
 
+      if (sourceName === "VisualAnalysis") {
+        navigate(`/components/visual-analysis/${res.data.id}`);
+        return;
+      }
+
       const response = await api.get(
         `/data-sources/${sourceName}/components/`
       );
@@ -346,7 +351,7 @@ export default function DataSourcePage() {
                     {sortKey === "description" &&
                       (sortAsc ? " ▲" : " ▼")}
                   </th>
-                  <th></th>
+                  <th>{t("actions") || "Actions"}</th>
                 </tr>
               </thead>
 
@@ -377,6 +382,13 @@ export default function DataSourcePage() {
                           alert(t("editOnlyAuthor"));
                         }
                       }
+                      if (sourceName === "VisualAnalysis") {
+                        if (user?.username === c.created_by || role === "admin") {
+                          navigate(`/components/visual-analysis/${c.id}`);
+                        } else {
+                          alert(t("editOnlyAuthor"));
+                        }
+                      }
                     }}
                   >
                     <td>{c.name}</td>
@@ -399,20 +411,27 @@ export default function DataSourcePage() {
                       )}
                     </td>
                     <td>{c.description}</td>
-                    <td>
-                      {(user?.username === c.created_by ||
-                        role === "admin") && (
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
-                            onClick={() =>
-                              handleDelete(c.id, c.created_by)
-                            }
-                            className="btn-danger-outline"
-                          >
-                            {t("delete")}
-                          </Button>
-                        )}
+                    <td className="d-flex gap-2">
+                      {sourceName === "Events" && (
+                        <Button
+                          variant="none"
+                          size="sm"
+                          className="btn-brand"
+                          onClick={() => navigate(`/components/analysis/${c.id}`)}
+                        >
+                          {t("analyze") || "Analyze"}
+                        </Button>
+                      )}
+                      {(user?.username === c.created_by || role === "admin") && (
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => handleDelete(c.id, c.created_by)}
+                          className="btn-danger-outline"
+                        >
+                          {t("delete")}
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}

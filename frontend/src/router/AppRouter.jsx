@@ -5,7 +5,9 @@ import Settings from "../pages/Settings";
 import EventRecordsPage from "../pages/events/EventRecordsPage";
 import NotebookEditor from "../pages/notebook/NotebookEditor";
 import PiRecordsPage from "../pages/pi/PiRecordsPage";
+import MainClassAnalysisPage from "../pages/analysis/MainClassAnalysisPage";
 import { PetexTipsProvider } from "../pages/notebook/context/PetexTipsContext";
+import VisualAnalysisBuilder from "../pages/visual/VisualAnalysisBuilder";
 import DataSourcePage from "../pages/DataSourcePage";
 import Scenarios from "../pages/scenario/Scenarios";
 import Scheduler from "../pages/scheduler/WorkflowSchedulerPage";
@@ -36,6 +38,8 @@ export default function AppRouter() {
           <Route index element={<Dashboard />} />
           <Route path=":sourceType/:sourceName" element={<DataSourcePage />} />
           <Route path="components/events/:id" element={<EventRecordsPage />} />
+          <Route path="components/analysis/:id" element={<MainClassAnalysisPage />} />
+          <Route path="components/visual-analysis/:id" element={<VisualAnalysisBuilder />} />
           {/* <Route path="components/workflows/:id" element={<WorkflowRecordsPage />} /> */}
           <Route
             path="components/workflows/:id"

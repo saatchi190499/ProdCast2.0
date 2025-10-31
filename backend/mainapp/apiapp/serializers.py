@@ -13,6 +13,7 @@ from .models import (
     WorkflowScheduler,
     WorkflowSchedulerLog,
     WorkflowRun,
+    VisualAnalysisConfig,
 )
 from django.utils.timezone import now
 
@@ -243,3 +244,11 @@ class WorkflowRunSerializer(serializers.ModelSerializer):
         model = WorkflowRun
         fields = ["id", "workflow", "scheduler", "task_id",
                   "started_at", "finished_at", "status", "output", "error"]
+
+
+# ---------- Visual Analysis ----------
+class VisualAnalysisConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VisualAnalysisConfig
+        fields = ["id", "component", "charts", "updated_at"]
+        read_only_fields = ["id", "updated_at"]
