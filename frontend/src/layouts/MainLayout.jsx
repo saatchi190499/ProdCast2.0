@@ -49,6 +49,7 @@ export default function MainLayout() {
     FORECAST: false,
     SOURCE: false,
     OUTPUT: false,
+    VISUAL: false,
   });
 
   // Map specific data source names to custom sidebar groups
@@ -94,6 +95,7 @@ export default function MainLayout() {
       FORECAST: path.startsWith("/forecast") || path.startsWith("/scenarios"),
       SOURCE: path.startsWith("/source") || path.startsWith("/input"), // keep legacy
       OUTPUT: path.startsWith("/output"),
+      VISUAL: path.startsWith("/visual"),
     });
   }, [location]);
 
@@ -122,7 +124,7 @@ export default function MainLayout() {
     clearTimeout(hoverTimer.current);
     leaveTimer.current = setTimeout(() => {
       setCollapsed(true);
-      setOpenMenus({ FORECAST: false, SOURCE: false, OUTPUT: false });
+      setOpenMenus({ FORECAST: false, SOURCE: false, OUTPUT: false, VISUAL: false });
     }, 120);
   };
 
@@ -152,6 +154,7 @@ export default function MainLayout() {
     if (dsName === "Events") return `/components/events/${compId}`;
     if (dsName === "Workflows") return `/components/workflows/${compId}`;
     if (dsName === "PI System") return `/components/pi/${compId}`;
+    if (dsName === "VisualAnalysis") return `/components/visual-analysis/${compId}`;
     // Fallback: open the data source page
     return `/input/${dsName}`;
   };
@@ -370,6 +373,15 @@ export default function MainLayout() {
               </div>
             );
           })()}
+
+
+          {/* Visual Analysis - top level link */}
+          <SidebarLink
+            to="/visual/VisualAnalysis"
+            icon={<FiBarChart2 />}
+            label={"VisualAnalysis"}
+            collapsed={collapsed}
+          />
 
 
           <SidebarLink

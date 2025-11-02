@@ -137,7 +137,7 @@ class DataSource(models.Model):
         ("SOURCE", "Source"),
         ("FORECAST", "Forecast"),
         ("WORKFLOW", "Workflow"),
-        ("OUTPUT", "Output"),
+        ("VISUAL", "Visual"),
     ]
 
     data_source_name = models.CharField("Data Source", max_length=50, unique=True)

@@ -94,7 +94,8 @@
     "workflow": "Workflow",
     "equip_management": "Equipment Management",
     "scheduler": "Scheduler",
-    "forecast": "Forecast"
+    "forecast": "Forecast",
+    "visualAnalysis": "Visual Analysis"
     
 
 }
