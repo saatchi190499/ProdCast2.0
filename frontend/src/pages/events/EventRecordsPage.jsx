@@ -252,6 +252,24 @@ export default function EventRecordsPage() {
 
   const handleExportCSV = () => {
     // Export values in the currently selected unit system and include unit column
+    const formatDateDDMMYYYY = (input) => {
+      if (!input) return "";
+      const s = String(input);
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s; // already formatted
+      const datePart = s.includes('T') ? s.split('T')[0] : s;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        const [y, m, d] = datePart.split('-');
+        return `${d}/${m}/${y}`;
+      }
+      const dt = new Date(s);
+      if (!isNaN(dt.getTime())) {
+        const d = String(dt.getDate()).padStart(2, '0');
+        const m = String(dt.getMonth() + 1).padStart(2, '0');
+        const y = String(dt.getFullYear());
+        return `${d}/${m}/${y}`;
+      }
+      return s;
+    };
     const exportKeys = [
       "date_time",
       "object_type",
@@ -275,7 +293,7 @@ export default function EventRecordsPage() {
         displayValue = Number(displayValue) * scale + offset;
       }
       const unit = getUnitForProperty(r.object_type_property);
-      const rowObj = { ...r, value: displayValue, unit };
+      const rowObj = { ...r, date_time: formatDateDDMMYYYY(r.date_time), value: displayValue, unit };
       return exportKeys
         .map((k) => `"${String(rowObj[k] ?? "").replace(/"/g, '""')}"`)
         .join(",");
@@ -525,7 +543,9 @@ export default function EventRecordsPage() {
                       value={r.object_type_property || ""}
                       onChange={(e) => handleChange(i, "object_type_property", e.target.value)}>
                       <option value="">Select Property</option>
-                      {(propertyOptions[r.object_type] || []).map((prop) => (
+                      {(propertyOptions[r.object_type] || [])
+                        .filter((prop) => prop.category !== 'Results')
+                        .map((prop) => (
                         <option key={prop.id} value={prop.name}>{prop.name}</option>
                       ))}
                     </Form.Select>

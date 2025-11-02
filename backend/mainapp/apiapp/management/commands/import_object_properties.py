@@ -1,77 +1,55 @@
-import pandas as pd
+import os
 from django.core.management.base import BaseCommand
 from apiapp.models import ObjectType, ObjectTypeProperty, UnitCategory
-from django.conf import settings
-import os
 
 class Command(BaseCommand):
-    help = "Import GAP OS Commands into ObjectTypeProperty table"
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--file",
-            type=str,
-            default=os.path.join(settings.BASE_DIR, 'apiapp', 'management', 'commands', 'data', 'GAP_OS_Commands.xlsx'),
-            help="Path to the Excel file",
-        )
+    help = "Create GAP.WELL SolverResults properties with category 'Results'"
 
     def handle(self, *args, **options):
-        file_path = options["file"]
-        df = pd.read_excel(file_path)
+        data = [
+            ("GOR", "GAP.MOD[{PROD}].WELL[{...}].SolverResults[0].GOR", "gas_oil_ratio"),
+            ("GasRate", "GAP.MOD[{PROD}].WELL[{...}].SolverResults[0].GasRate", "gas_rate"),
+            ("LiquidRate", "GAP.MOD[{PROD}].WELL[{...}].SolverResults[0].LiqRate", "liquid_rate"),
+            ("OilRate", "GAP.MOD[{PROD}].WELL[{...}].SolverResults[0].OilRate", "oil_rate"),
+            ("ReservoirPressure", "GAP.MOD[{PROD}].WELL[{...}].SolverResults[0].ResPres", "pressure"),
+            ("WCT", "GAP.MOD[{PROD}].WELL[{...}].SolverResults[0].WCT", "percent"),
+            ("WHPressure", "GAP.MOD[{PROD}].WELL[{...}].SolverResults[0].FWHP", "pressure"),
+            ("WHTemperature", "GAP.MOD[{PROD}].WELL[{...}].SolverResults[0].OtherResult[15]", "temperature"),
+        ]
+
+        # Найдём тип оборудования "WELL"
+        try:
+            obj_type = ObjectType.objects.get(object_type_name="WELL")
+        except ObjectType.DoesNotExist:
+            self.stdout.write(self.style.ERROR("❌ ObjectType 'WELL' not found"))
+            return
 
         created_count = 0
-        skipped_count = 0
+        updated_count = 0
 
-        for _, row in df.iterrows():
-            try:
-                object_type_name = row.get("Equipment")
-                property_name = row.get("Parameter")
-                category = row.get("SubSection") or "General"
-                openserver = row.get("OS")
-                unit_category_name = row.get("UnitCategoryFinal")
+        for name, os_cmd, unit in data:
+            # Проверим или создадим UnitCategory
+            unit_cat, _ = UnitCategory.objects.get_or_create(
+                unit_category_name=unit,
+                defaults={"unit_category_description": f"{unit} auto-created"},
+            )
 
-                # Пропускаем пустые
-                if pd.isna(property_name):
-                    continue
-
-                # Найти ObjectType
-                try:
-                    obj_type = ObjectType.objects.get(object_type_name=object_type_name)
-                except ObjectType.DoesNotExist:
-                    self.stdout.write(
-                        self.style.WARNING(f"ObjectType not found: {object_type_name}")
-                    )
-                    skipped_count += 1
-                    continue
-
-                # Найти UnitCategory
-                unit_category = None
-                if unit_category_name and unit_category_name != "Unknown":
-                    unit_category = UnitCategory.objects.filter(
-                        unit_category_name__iexact=unit_category_name
-                    ).first()
-
-                # Создать или обновить
-                otp, created = ObjectTypeProperty.objects.update_or_create(
-                    object_type=obj_type,
-                    object_type_property_name=property_name,
-                    defaults={
-                        "object_type_property_category": category,
-                        "openserver": openserver,
-                        "unit_category": unit_category,
-                    },
-                )
-                if created:
-                    created_count += 1
-
-            except Exception as e:
-                self.stdout.write(
-                    self.style.ERROR(f"Error processing row {row.to_dict()}: {e}")
-                )
-                skipped_count += 1
+            otp, created = ObjectTypeProperty.objects.update_or_create(
+                object_type=obj_type,
+                object_type_property_name=name,
+                defaults={
+                    "object_type_property_category": "Results",  # 👈 фиксированная категория
+                    "openserver": os_cmd,
+                    "unit_category": unit_cat,
+                },
+            )
+            if created:
+                created_count += 1
+            else:
+                updated_count += 1
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Import completed. Created {created_count}, Skipped {skipped_count}"
+                f"✅ Import completed. Created: {created_count}, Updated: {updated_count}"
             )
         )
