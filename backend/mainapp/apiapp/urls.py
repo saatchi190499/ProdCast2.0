@@ -52,9 +52,15 @@ urlpatterns = [
     path("scenarios/create/", ScenarioCreateView.as_view(), name="scenario-create"),
     path("scenarios/all/", ScenarioListView.as_view(), name="scenarios-all"),
     path("scenarios/run/<int:scenario_id>/", RunScenarioView.as_view(), name="scenario-run"),
+    # Alias expected by frontend modal
+    path("scenarios/<int:scenario_id>/start/", RunScenarioView.as_view(), name="scenario-start"),
     path("scenarios/<int:scenario_id>/logs/", ScenarioLogsView.as_view(), name="scenario-logs"),
     path("scenarios/workers-status/", WorkersStatusView.as_view(), name="scenario-workers-status"),
     path("scenarios/task/<str:task_id>/", TaskManagementView.as_view(), name="scenario-task"),
+
+    # --- Workers (alias for frontend expectations) ---
+    # Frontend polls GET /workers/schedule/ for Celery worker status
+    path("workers/schedule/", WorkersStatusView.as_view(), name="workers-schedule"),
 
     # --- Workflows (Scheduler) ---
     path("workflows/run-schedules/", RunWorkflowSchedulesView.as_view(), name="workflow-run-schedules"),
