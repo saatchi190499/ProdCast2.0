@@ -7,6 +7,7 @@ from .views.admin_view import UserListView, change_user_role
 from .views.me_view import MeView
 from .views.scenario_components_view import *
 from .views.scenario_view import *
+from .views.scenario_results_view import *
 from .views.object_meta_data_view import *
 from .views.unit_view import *
 from .views.workers_view import *
@@ -55,6 +56,7 @@ urlpatterns = [
     # Alias expected by frontend modal
     path("scenarios/<int:scenario_id>/start/", RunScenarioView.as_view(), name="scenario-start"),
     path("scenarios/<int:scenario_id>/logs/", ScenarioLogsView.as_view(), name="scenario-logs"),
+    path("scenarios/<int:scenario_id>/results/", ScenarioResultsView.as_view(), name="scenario-results"),
     path("scenarios/workers-status/", WorkersStatusView.as_view(), name="scenario-workers-status"),
     path("scenarios/task/<str:task_id>/", TaskManagementView.as_view(), name="scenario-task"),
 

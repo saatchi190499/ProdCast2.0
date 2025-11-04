@@ -24,6 +24,11 @@ const COLORS = [
   "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
 ];
 
+const toLocalIso = (d) => {
+  const offsetMs = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
+};
+
 export default function ScenarioResultsPage() {
   const { scenarioId } = useParams();
   const navigate = useNavigate();
@@ -42,13 +47,18 @@ export default function ScenarioResultsPage() {
   const [selectedProperty, setSelectedProperty] = useState("");
   const [selectedInstances, setSelectedInstances] = useState([]);
 
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  // Default date range: last 30 days
+  const now = new Date();
+  const ago = new Date(now);
+  ago.setDate(now.getDate() - 30);
+  const [start, setStart] = useState(toLocalIso(ago));
+  const [end, setEnd] = useState(toLocalIso(now));
 
   useEffect(() => {
     const fetchAll = async () => {
+      setLoading(true);
       try {
-        // Get scenarios and find the chosen one
+        // Get scenarios and find the chosen one (for title)
         const scnRes = await api.get("/scenarios/all/");
         const scn = (scnRes.data || []).find(x => String(x.scenario_id) === String(scenarioId));
         if (!scn) throw new Error("Scenario not found");
@@ -63,35 +73,19 @@ export default function ScenarioResultsPage() {
         setInstancesMap(inst);
         setPropertiesMap(props);
 
-        // Pull MainClass records for each component in the scenario
-        const compIds = (scn.components || []).map(c => c.id);
-        const recLists = await Promise.all(
-          compIds.map(id => api.get(`/components/events/${id}`))
-        );
-        const all = recLists.flatMap(r => r.data || []);
-        const filtered = all.filter(r => String(r.scenario) === String(scenarioId));
-        setRecords(filtered);
-
-        // Default filters: first type/property/instances
-        if (t.length > 0) {
+        // Default filters only if not set yet
+        if (!selectedType && t.length > 0) {
           const defType = t[0].name;
           setSelectedType(defType);
           const propList = props[defType] || [];
-          if (propList.length > 0) setSelectedProperty(propList[0].name);
+          if (!selectedProperty && propList.length > 0) setSelectedProperty(propList[0].name);
           const instList = inst[defType] || [];
-          setSelectedInstances(instList.slice(0, 3).map(x => x.name));
+          if (selectedInstances.length === 0) setSelectedInstances(instList.slice(0, 3).map(x => x.name));
         }
 
-        // Default date range: last 30 days
-        const now = new Date();
-        const ago = new Date(now);
-        ago.setDate(now.getDate() - 30);
-        const toLocalIso = (d) => {
-          const offsetMs = d.getTimezoneOffset() * 60000;
-          return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
-        };
-        setStart(toLocalIso(ago));
-        setEnd(toLocalIso(now));
+        // Fetch scenario results with backend filtering by scenario_id and date range
+        const res = await api.get(`/scenarios/${scenarioId}/results/`, { params: { start, end } });
+        setRecords((res.data && res.data.records) || []);
 
         setLoading(false);
       } catch (e) {
@@ -101,7 +95,8 @@ export default function ScenarioResultsPage() {
       }
     };
     fetchAll();
-  }, [scenarioId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioId, start, end]);
 
   const filteredPointsByInstance = useMemo(() => {
     if (!selectedType || !selectedProperty) return {};
@@ -287,4 +282,3 @@ export default function ScenarioResultsPage() {
     </div>
   );
 }
-
