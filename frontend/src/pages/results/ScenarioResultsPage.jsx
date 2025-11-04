@@ -46,25 +46,20 @@ export default function ScenarioResultsPage() {
   const [selectedType, setSelectedType] = useState("");
   const [selectedProperty, setSelectedProperty] = useState("");
   const [selectedInstances, setSelectedInstances] = useState([]);
+  // Unit systems
+  const [unitSystems, setUnitSystems] = useState([]); // [{id, name}]
+  const [unitMapBySystem, setUnitMapBySystem] = useState({}); // sysId -> { propId -> {unit, scale_factor, offset} }
+  const [selectedUnitSystemId, setSelectedUnitSystemId] = useState(null);
 
-  // Default date range: last 30 days
-  const now = new Date();
-  const ago = new Date(now);
-  ago.setDate(now.getDate() - 30);
-  const [start, setStart] = useState(toLocalIso(ago));
-  const [end, setEnd] = useState(toLocalIso(now));
+  // Start/end default to empty, then auto-set to min/max from data
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const [autoRangeSet, setAutoRangeSet] = useState(false);
 
+  // Load metadata + unit systems once per scenario
   useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
+    const loadMeta = async () => {
       try {
-        // Get scenarios and find the chosen one (for title)
-        const scnRes = await api.get("/scenarios/all/");
-        const scn = (scnRes.data || []).find(x => String(x.scenario_id) === String(scenarioId));
-        if (!scn) throw new Error("Scenario not found");
-        setScenarioName(scn.scenario_name || `Scenario ${scenarioId}`);
-
-        // Metadata for mapping ids to names
         const metaRes = await api.get("/object-metadata/");
         const t = metaRes.data.types;
         const inst = metaRes.data.instances;
@@ -73,7 +68,6 @@ export default function ScenarioResultsPage() {
         setInstancesMap(inst);
         setPropertiesMap(props);
 
-        // Default filters only if not set yet
         if (!selectedType && t.length > 0) {
           const defType = t[0].name;
           setSelectedType(defType);
@@ -83,10 +77,60 @@ export default function ScenarioResultsPage() {
           if (selectedInstances.length === 0) setSelectedInstances(instList.slice(0, 3).map(x => x.name));
         }
 
-        // Fetch scenario results with backend filtering by scenario_id and date range
-        const res = await api.get(`/scenarios/${scenarioId}/results/`, { params: { start, end } });
-        setRecords((res.data && res.data.records) || []);
+        try {
+          const unitRes = await api.get("/unit-system-property-mapping/");
+          const systems = (unitRes.data || []).map(s => ({ id: s.unit_system_id, name: s.unit_system_name, properties: s.properties }));
+          setUnitSystems(systems.map(s => ({ id: s.id, name: s.name })));
+          const mapBySystem = {};
+          systems.forEach(s => {
+            const m = {};
+            (s.properties || []).forEach(p => {
+              m[p.property_id] = { unit: p.unit, scale_factor: Number(p.scale_factor ?? 1), offset: Number(p.offset ?? 0) };
+            });
+            mapBySystem[s.id] = m;
+          });
+          setUnitMapBySystem(mapBySystem);
+          if (!selectedUnitSystemId && systems.length > 0) setSelectedUnitSystemId(systems[0].id);
+        } catch (e) {
+          console.warn("Unit mapping load failed", e);
+        }
+      } catch (e) {
+        console.error(e);
+        setError("Failed to load metadata");
+      }
+    };
+    loadMeta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioId]);
 
+  // Load results separately and set scenario name from response
+  useEffect(() => {
+    const loadResults = async () => {
+      setLoading(true);
+      try {
+        let res;
+        if (start && end) {
+          res = await api.get(`/scenarios/${scenarioId}/results/`, { params: { start, end } });
+        } else {
+          res = await api.get(`/scenarios/${scenarioId}/results/`);
+        }
+        const recs = (res.data && res.data.records) || [];
+        setRecords(recs);
+        const sn = res.data && res.data.scenario && res.data.scenario.scenario_name;
+        if (sn) setScenarioName(sn);
+
+        if (!autoRangeSet && (!start || !end) && recs.length > 0) {
+          const times = recs
+            .map(r => r.date_time ? new Date(r.date_time) : null)
+            .filter(d => d && !isNaN(d.getTime()));
+          if (times.length > 0) {
+            const minD = new Date(Math.min(...times.map(d => d.getTime())));
+            const maxD = new Date(Math.max(...times.map(d => d.getTime())));
+            setStart(toLocalIso(minD));
+            setEnd(toLocalIso(maxD));
+            setAutoRangeSet(true);
+          }
+        }
         setLoading(false);
       } catch (e) {
         console.error(e);
@@ -94,9 +138,8 @@ export default function ScenarioResultsPage() {
         setLoading(false);
       }
     };
-    fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenarioId, start, end]);
+    loadResults();
+  }, [scenarioId, start, end, autoRangeSet]);
 
   const filteredPointsByInstance = useMemo(() => {
     if (!selectedType || !selectedProperty) return {};
@@ -107,11 +150,14 @@ export default function ScenarioResultsPage() {
     const thisTypeId = typeIdByName[selectedType];
 
     const pointsByInstance = {};
+    const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+    const propsList = propertiesMap[selectedType] || [];
+    const selectedPropId = propsList.find(x => x.name === selectedProperty)?.id;
+    const conv = selectedPropId ? sysMap[selectedPropId] : null;
     for (const r of records) {
       if (r.object_type !== thisTypeId) continue;
 
       const instList = instancesMap[selectedType] || [];
-      const propsList = propertiesMap[selectedType] || [];
       const instName = instList.find(x => x.id === r.object_instance)?.name;
       const propName = propsList.find(x => x.id === r.object_type_property)?.name;
       if (!instName || !propName) continue;
@@ -124,8 +170,11 @@ export default function ScenarioResultsPage() {
       if (startTs && t.getTime() < startTs) continue;
       if (endTs && t.getTime() > endTs) continue;
 
-      const y = Number(r.value);
+      let y = Number(r.value);
       if (!isFinite(y)) continue;
+      if (conv) {
+        y = y * Number(conv.scale_factor ?? 1) + Number(conv.offset ?? 0);
+      }
 
       if (!pointsByInstance[instName]) pointsByInstance[instName] = [];
       pointsByInstance[instName].push({ x: t, y });
@@ -135,7 +184,7 @@ export default function ScenarioResultsPage() {
       pointsByInstance[k].sort((a, b) => a.x - b.x);
     }
     return pointsByInstance;
-  }, [records, selectedType, selectedProperty, selectedInstances, start, end, types, instancesMap, propertiesMap]);
+  }, [records, selectedType, selectedProperty, selectedInstances, start, end, types, instancesMap, propertiesMap, selectedUnitSystemId, unitMapBySystem]);
 
   const chartData = useMemo(() => {
     const instNames = Object.keys(filteredPointsByInstance);
@@ -153,6 +202,16 @@ export default function ScenarioResultsPage() {
     };
   }, [filteredPointsByInstance]);
 
+  // Properties of selected type limited to category "Results"
+  const propertiesOfTypeAll = selectedType ? (propertiesMap[selectedType] || []) : [];
+  const propertiesOfType = propertiesOfTypeAll.filter(p => (p.category || "").toLowerCase() === "results");
+  // Keep selected property valid for filtered list
+  useEffect(() => {
+    const exists = propertiesOfType.some(p => p.name === selectedProperty);
+    if (!exists) setSelectedProperty(propertiesOfType[0]?.name || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedType, propertiesMap]);
+
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -160,7 +219,14 @@ export default function ScenarioResultsPage() {
     plugins: {
       legend: { position: "top" },
       title: { display: true, text: `Results • ${scenarioName}` },
-      tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}` } }
+      tooltip: { callbacks: { label: (ctx) => {
+        const val = ctx.parsed.y;
+        const propsList = propertiesMap[selectedType] || [];
+        const selectedPropId = propsList.find(x => x.name === selectedProperty)?.id;
+        const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+        const unitLbl = (selectedPropId && sysMap[selectedPropId]?.unit) ? ` ${sysMap[selectedPropId].unit}` : "";
+        return `${ctx.dataset.label}: ${val}${unitLbl}`;
+      } } }
     },
     scales: {
       x: { type: "time", time: { unit: "day" } },
@@ -170,7 +236,7 @@ export default function ScenarioResultsPage() {
 
   if (loading) {
     return (
-      <div className="container">
+      <div className="container-fluid">
         <div className="d-flex align-items-center" style={{ gap: 12 }}>
           <Spinner animation="border" size="sm" />
           <span>Loading scenario results…</span>
@@ -181,104 +247,123 @@ export default function ScenarioResultsPage() {
 
   if (error) {
     return (
-      <div className="container">
+      <div className="container-fluid">
         <Alert variant="danger">{error}</Alert>
         <Button variant="none" className="btn-brand" onClick={() => navigate(-1)}>← Back</Button>
       </div>
     );
   }
 
-  const propertiesOfType = selectedType ? (propertiesMap[selectedType] || []) : [];
   const instancesOfType = selectedType ? (instancesMap[selectedType] || []) : [];
 
   return (
-    <div className="container">
+    <div className="container-fluid">
       <div className="d-flex align-items-center justify-content-between mb-3">
         <h3 className="ds-title" style={{ margin: 0 }}>{scenarioName}</h3>
         <Button variant="none" className="btn-brand" onClick={() => navigate(-1)}>← Back</Button>
       </div>
 
-      <Card className="mb-3">
-        <Card.Body>
-          <div className="row g-3">
-            <div className="col-md-3">
-              <Form.Label className="ds-title">Object Type</Form.Label>
-              <Form.Select
-                className="ds-input form-select"
-                value={selectedType}
-                onChange={e => {
-                  const nt = e.target.value;
-                  setSelectedType(nt);
-                  // Reset dependent filters
-                  const props = propertiesMap[nt] || [];
-                  setSelectedProperty(props[0]?.name || "");
-                  const insts = instancesMap[nt] || [];
-                  setSelectedInstances(insts.slice(0, 3).map(x => x.name));
-                }}
-              >
-                {types.map(t => (
-                  <option key={t.id} value={t.name}>{t.name}</option>
-                ))}
-              </Form.Select>
-            </div>
-            <div className="col-md-3">
-              <Form.Label className="ds-title">Property</Form.Label>
-              <Form.Select
-                className="ds-input form-select"
-                value={selectedProperty}
-                onChange={e => setSelectedProperty(e.target.value)}
-              >
-                {propertiesOfType.map(p => (
-                  <option key={p.id} value={p.name}>{p.name}{p.unit ? ` (${p.unit})` : ""}</option>
-                ))}
-              </Form.Select>
-            </div>
-            <div className="col-md-6">
-              <Form.Label className="ds-title">Instances</Form.Label>
-              <Form.Select
-                multiple
-                className="ds-input form-select"
-                value={selectedInstances}
-                onChange={e => setSelectedInstances(Array.from(e.target.selectedOptions).map(o => o.value))}
-                style={{ height: 120 }}
-              >
-                {instancesOfType.map(inst => (
-                  <option key={inst.id} value={inst.name}>{inst.name}</option>
-                ))}
-              </Form.Select>
-            </div>
-          </div>
-
-          <div className="row g-3 mt-1">
-            <div className="col-md-3">
-              <Form.Label className="ds-title">Start</Form.Label>
-              <Form.Control
-                type="datetime-local"
-                className="ds-input"
-                value={start}
-                onChange={e => setStart(e.target.value)}
-              />
-            </div>
-            <div className="col-md-3">
-              <Form.Label className="ds-title">End</Form.Label>
-              <Form.Control
-                type="datetime-local"
-                className="ds-input"
-                value={end}
-                onChange={e => setEnd(e.target.value)}
-              />
-            </div>
-          </div>
-        </Card.Body>
-      </Card>
-
-      <Card>
-        <Card.Body>
-          <div style={{ height: 480 }}>
-            <Line data={chartData} options={chartOptions} height={480} />
-          </div>
-        </Card.Body>
-      </Card>
+      <div style={{ display: "flex", gap: 16, alignItems: "stretch" }}>
+        <div style={{ flex: "0 0 250px" }}>
+          <Card className="mb-3" style={{ height: "100%" }}>
+            <Card.Body>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <Form.Label className="ds-title">Unit System</Form.Label>
+                  <Form.Select
+                    className="ds-input form-select"
+                    value={selectedUnitSystemId || ""}
+                    onChange={e => setSelectedUnitSystemId(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    {unitSystems.map(us => (
+                      <option key={us.id} value={us.id}>{us.name}</option>
+                    ))}
+                  </Form.Select>
+                </div>
+                <div>
+                  <Form.Label className="ds-title">Object Type</Form.Label>
+                  <Form.Select
+                    className="ds-input form-select"
+                    value={selectedType}
+                    onChange={e => {
+                      const nt = e.target.value;
+                      setSelectedType(nt);
+                      // Reset dependent filters
+                      const props = propertiesMap[nt] || [];
+                      setSelectedProperty(props[0]?.name || "");
+                      const insts = instancesMap[nt] || [];
+                      setSelectedInstances(insts.slice(0, 3).map(x => x.name));
+                    }}
+                  >
+                    {types.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </Form.Select>
+                </div>
+                <div>
+                  <Form.Label className="ds-title">Property</Form.Label>
+                  <Form.Select
+                    className="ds-input form-select"
+                    value={selectedProperty}
+                    onChange={e => setSelectedProperty(e.target.value)}
+                  >
+                    {propertiesOfType.map(p => {
+                      const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+                      const u = sysMap[p.id]?.unit ?? p.unit;
+                      return (
+                        <option key={p.id} value={p.name}>{p.name}{u ? ` (${u})` : ""}</option>
+                      );
+                    })}
+                  </Form.Select>
+                </div>
+                <div>
+                  <Form.Label className="ds-title">Instances</Form.Label>
+                  <Form.Select
+                    multiple
+                    className="ds-input form-select"
+                    value={selectedInstances}
+                    onChange={e => setSelectedInstances(Array.from(e.target.selectedOptions).map(o => o.value))}
+                    style={{ height: "100%", maxWidth: 420 }}
+                  >
+                    {instancesOfType.map(inst => (
+                      <option key={inst.id} value={inst.name}>{inst.name}</option>
+                    ))}
+                  </Form.Select>
+                </div>
+                <div>
+                  <Form.Label className="ds-title">Start</Form.Label>
+                  <Form.Control
+                    type="datetime-local"
+                    className="ds-input"
+                    value={start}
+                    onChange={e => setStart(e.target.value)}
+                    style={{ maxWidth: 260 }}
+                  />
+                </div>
+                <div>
+                  <Form.Label className="ds-title">End</Form.Label>
+                  <Form.Control
+                    type="datetime-local"
+                    className="ds-input"
+                    value={end}
+                    onChange={e => setEnd(e.target.value)}
+                    style={{ maxWidth: 260 }}
+                  />
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Card>
+            <Card.Body>
+              <div style={{ height: 600 }}>
+                <Line data={chartData} options={chartOptions} height={600} />
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
