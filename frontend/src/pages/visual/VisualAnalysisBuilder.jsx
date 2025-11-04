@@ -40,6 +40,10 @@ export default function VisualAnalysisBuilder() {
   const [instancesMap, setInstancesMap] = useState({});
   const [propertiesMap, setPropertiesMap] = useState({});
   const [scenarios, setScenarios] = useState([]);
+  // Unit systems
+  const [unitSystems, setUnitSystems] = useState([]); // [{id, name}]
+  const [unitMapBySystem, setUnitMapBySystem] = useState({}); // sysId -> { propId -> {unit, scale_factor, offset} }
+  const [selectedUnitSystemId, setSelectedUnitSystemId] = useState(null);
 
   const [selectedType, setSelectedType] = useState("");
   const [selectedProperty, setSelectedProperty] = useState("");
@@ -49,6 +53,7 @@ export default function VisualAnalysisBuilder() {
   const [dataLoading, setDataLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const [autoFetched, setAutoFetched] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
   const [defaultInstanceByType, setDefaultInstanceByType] = useState({});
 
   // Layout and per-panel selection
@@ -94,6 +99,36 @@ export default function VisualAnalysisBuilder() {
     loadScenarios();
   }, []);
 
+  // Load unit systems + property mappings
+  useEffect(() => {
+    const loadUnits = async () => {
+      try {
+        const unitRes = await api.get("/unit-system-property-mapping/");
+        const systems = (unitRes.data || []).map(s => ({ id: s.unit_system_id, name: s.unit_system_name, properties: s.properties }));
+        setUnitSystems(systems.map(s => ({ id: s.id, name: s.name })));
+        const mapBySystem = {};
+        systems.forEach(s => {
+          const m = {};
+          (s.properties || []).forEach(p => {
+            m[p.property_id] = { unit: p.unit, scale_factor: Number(p.scale_factor ?? 1), offset: Number(p.offset ?? 0) };
+          });
+          mapBySystem[s.id] = m;
+        });
+        setUnitMapBySystem(mapBySystem);
+      } catch (e) {
+        console.warn("Unit mapping load failed", e);
+      }
+    };
+    loadUnits();
+  }, []);
+
+  // After config is loaded, if no unit system picked yet, pick the first
+  useEffect(() => {
+    if (configLoaded && !selectedUnitSystemId && unitSystems.length > 0) {
+      setSelectedUnitSystemId(unitSystems[0].id);
+    }
+  }, [configLoaded, selectedUnitSystemId, unitSystems]);
+
   // Load persisted default instance mapping
   useEffect(() => {
     try {
@@ -107,6 +142,32 @@ export default function VisualAnalysisBuilder() {
     if (mapped) return mapped;
     const list = instancesMap[typeName] || [];
     return list[0]?.name || "";
+  };
+
+  const toLocalInput = (s) => {
+    if (!s) return s;
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    const offsetMs = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
+  };
+
+  const getPropertyUnit = (typeName, propName) => {
+    const propsList = propertiesMap[typeName] || [];
+    const pObj = propsList.find(x => x.name === propName);
+    if (!pObj) return "";
+    const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+    const unitFromMap = pObj.id ? (sysMap[pObj.id]?.unit || "") : "";
+    return unitFromMap || pObj.unit || "";
+  };
+
+  const withAliasAndUnit = (typeName, propName) => {
+    const propsList = propertiesMap[typeName] || [];
+    const pObj = propsList.find(x => x.name === propName);
+    const alias = pObj && (pObj.alias || pObj.alias_text);
+    const unit = getPropertyUnit(typeName, propName);
+    const nameWithAlias = alias ? `${propName} (${alias})` : propName;
+    return unit ? `${nameWithAlias} [${unit}]` : nameWithAlias;
   };
 
   // When one or more scenarios, enforce a single selected instance for global 1x1 mode
@@ -214,13 +275,13 @@ export default function VisualAnalysisBuilder() {
     }
   };
 
-  // Auto-fetch once after initial metadata load
+  // Auto-fetch once after metadata + config load
   useEffect(() => {
-    if (!loading && !dataLoading && !autoFetched) {
+    if (!loading && configLoaded && !dataLoading && !autoFetched) {
       fetchData().finally(() => setAutoFetched(true));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
+    }, [loading, configLoaded]);
 
   // Load existing VisualAnalysisConfig and apply to UI
   useEffect(() => {
@@ -228,21 +289,27 @@ export default function VisualAnalysisBuilder() {
       try {
         const res = await api.get(`/components/visual-analysis/${id}/config/`);
         const cfg = (res.data && res.data.charts && res.data.charts[0]) || null;
-        if (!cfg) return;
+        if (!cfg) { setConfigLoaded(true); return; }
         if (cfg.layout) setLayoutKey(cfg.layout);
         if (Array.isArray(cfg.scenarios)) setSelectedScenarioIds(cfg.scenarios.map(String));
-        if (cfg.start) setStart(cfg.start);
-        if (cfg.end) setEnd(cfg.end);
+        if (cfg.start) setStart(toLocalInput(cfg.start));
+        if (cfg.end) setEnd(toLocalInput(cfg.end));
+        if (cfg.unit_system_id) setSelectedUnitSystemId(cfg.unit_system_id);
         if (Array.isArray(cfg.panels)) {
           setPanels(cfg.panels.map(p => ({
             type: p.type || "",
             property: p.property || (Array.isArray(p.properties) && p.properties[0]) || "",
             properties: Array.isArray(p.properties) ? p.properties : (p.property ? [p.property] : []),
             instances: Array.isArray(p.instances) ? p.instances : [],
+            start: p.start ? toLocalInput(p.start) : undefined,
+            end: p.end ? toLocalInput(p.end) : undefined,
+            unit_system_id: p.unit_system_id ?? undefined,
           })));
         }
+        setConfigLoaded(true);
       } catch (e) {
         console.warn("Failed to load visual config", e);
+        setConfigLoaded(true);
       }
     };
     loadConfig();
@@ -257,11 +324,15 @@ export default function VisualAnalysisBuilder() {
             scenarios: selectedScenarioIds,
             start,
             end,
+            unit_system_id: selectedUnitSystemId,
             panels: (panels || []).map(p => ({
               type: p.type || "",
               property: p.property || (Array.isArray(p.properties) && p.properties[0]) || "",
               properties: Array.isArray(p.properties) ? p.properties : (p.property ? [p.property] : []),
               instances: Array.isArray(p.instances) ? p.instances : [],
+              start: p.start || undefined,
+              end: p.end || undefined,
+              unit_system_id: p.unit_system_id ?? undefined,
             })),
           },
         ],
@@ -288,6 +359,9 @@ export default function VisualAnalysisBuilder() {
       const instNameSel = selectedInstances[0];
       const nameByScenarioId = Object.fromEntries((scenarios || []).map(s => [s.scenario_id, s.scenario_name]));
       const pointsByScenario = {};
+      const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+      const selectedPropId = propsList.find(x => x.name === selectedProperty)?.id;
+      const conv = selectedPropId ? sysMap[selectedPropId] : null;
       for (const r of records) {
         if (r.object_type !== thisTypeId) continue;
         const instName = instList.find(x => x.id === r.object_instance)?.name;
@@ -300,7 +374,8 @@ export default function VisualAnalysisBuilder() {
         if (isNaN(t.getTime())) continue;
         if (startTs && t.getTime() < startTs) continue;
         if (endTs && t.getTime() > endTs) continue;
-        const y = Number(r.value);
+        let y = Number(r.value);
+        if (conv) y = y * Number(conv.scale_factor ?? 1) + Number(conv.offset ?? 0);
         if (!isFinite(y)) continue;
         const scenId = r.scenario || "unknown";
         const label = nameByScenarioId[scenId] || `Scenario ${scenId}`;
@@ -318,6 +393,7 @@ export default function VisualAnalysisBuilder() {
       const instNameSel = selectedInstances[0];
       const selProps = (selectedProperties && selectedProperties.length > 0) ? selectedProperties : (selectedProperty ? [selectedProperty] : []);
       const pointsByProperty = {};
+      const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
       for (const r of records) {
         if (r.object_type !== thisTypeId) continue;
         const instName = instList.find(x => x.id === r.object_instance)?.name;
@@ -330,7 +406,10 @@ export default function VisualAnalysisBuilder() {
         if (isNaN(t.getTime())) continue;
         if (startTs && t.getTime() < startTs) continue;
         if (endTs && t.getTime() > endTs) continue;
-        const y = Number(r.value);
+        const propId = propsList.find(x => x.name === propName)?.id;
+        const conv = propId ? sysMap[propId] : null;
+        let y = Number(r.value);
+        if (conv) y = y * Number(conv.scale_factor ?? 1) + Number(conv.offset ?? 0);
         if (!isFinite(y)) continue;
         if (!pointsByProperty[propName]) pointsByProperty[propName] = [];
         pointsByProperty[propName].push({ x: t, y });
@@ -343,6 +422,9 @@ export default function VisualAnalysisBuilder() {
 
     const selectedSet = new Set(selectedInstances || []);
     const pointsByInstance = {};
+    const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+    const selectedPropId = propsList.find(x => x.name === selectedProperty)?.id;
+    const conv = selectedPropId ? sysMap[selectedPropId] : null;
     for (const r of records) {
       if (r.object_type !== thisTypeId) continue;
       const instName = instList.find(x => x.id === r.object_instance)?.name;
@@ -355,7 +437,8 @@ export default function VisualAnalysisBuilder() {
       if (isNaN(t.getTime())) continue;
       if (startTs && t.getTime() < startTs) continue;
       if (endTs && t.getTime() > endTs) continue;
-      const y = Number(r.value);
+      let y = Number(r.value);
+      if (conv) y = y * Number(conv.scale_factor ?? 1) + Number(conv.offset ?? 0);
       if (!isFinite(y)) continue;
       if (!pointsByInstance[instName]) pointsByInstance[instName] = [];
       pointsByInstance[instName].push({ x: t, y });
@@ -364,7 +447,7 @@ export default function VisualAnalysisBuilder() {
       pointsByInstance[k].sort((a, b) => a.x - b.x);
     }
     return { mode: "instance", seriesMap: pointsByInstance };
-  }, [records, types, instancesMap, propertiesMap, selectedType, selectedProperty, selectedProperties, selectedInstances, start, end, isScenarioCompare, selectedScenarioIds.length, scenarios]);
+  }, [records, types, instancesMap, propertiesMap, selectedType, selectedProperty, selectedProperties, selectedInstances, start, end, isScenarioCompare, selectedScenarioIds.length, selectedUnitSystemId, unitMapBySystem, scenarios]);
 
   // Build series for a given set of instance names (per-panel)
   const buildSeriesForPanel = (panelCfg) => {
@@ -385,6 +468,8 @@ export default function VisualAnalysisBuilder() {
       const instNameSel = instanceNames && instanceNames[0];
       const nameByScenarioId = Object.fromEntries((scenarios || []).map(s => [s.scenario_id, s.scenario_name]));
       const pointsByScenario = {};
+      const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+      // scenario compare: we expect single property; if multiple passed, we include all
       for (const r of records) {
         if (r.object_type !== thisTypeId) continue;
         const instName = instList.find(x => x.id === r.object_instance)?.name;
@@ -397,7 +482,10 @@ export default function VisualAnalysisBuilder() {
         if (isNaN(t.getTime())) continue;
         if (startTs && t.getTime() < startTs) continue;
         if (endTs && t.getTime() > endTs) continue;
-        const y = Number(r.value);
+        const propId = propsList.find(x => x.name === propName)?.id;
+        const conv = propId ? sysMap[propId] : null;
+        let y = Number(r.value);
+        if (conv) y = y * Number(conv.scale_factor ?? 1) + Number(conv.offset ?? 0);
         if (!isFinite(y)) continue;
         const scenId = r.scenario || "unknown";
         const label = nameByScenarioId[scenId] || `Scenario ${scenId}`;
@@ -417,6 +505,7 @@ export default function VisualAnalysisBuilder() {
       // Series per property for a single instance
       const instNameSel = instanceNames[0];
       const pointsByProperty = {};
+      const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
       for (const r of records) {
         if (r.object_type !== thisTypeId) continue;
         const instName = instList.find(x => x.id === r.object_instance)?.name;
@@ -429,7 +518,10 @@ export default function VisualAnalysisBuilder() {
         if (isNaN(t.getTime())) continue;
         if (startTs && t.getTime() < startTs) continue;
         if (endTs && t.getTime() > endTs) continue;
-        const y = Number(r.value);
+        const propId = propsList.find(x => x.name === propName)?.id;
+        const conv = propId ? sysMap[propId] : null;
+        let y = Number(r.value);
+        if (conv) y = y * Number(conv.scale_factor ?? 1) + Number(conv.offset ?? 0);
         if (!isFinite(y)) continue;
         if (!pointsByProperty[propName]) pointsByProperty[propName] = [];
         pointsByProperty[propName].push({ x: t, y });
@@ -444,6 +536,7 @@ export default function VisualAnalysisBuilder() {
     const selectedSet = new Set(instanceNames || []);
     const oneProperty = propertyNames[0];
     const pointsByInstance = {};
+    const sysMap2 = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
     for (const r of records) {
       if (r.object_type !== thisTypeId) continue;
       const instName = instList.find(x => x.id === r.object_instance)?.name;
@@ -456,7 +549,10 @@ export default function VisualAnalysisBuilder() {
       if (isNaN(t.getTime())) continue;
       if (startTs && t.getTime() < startTs) continue;
       if (endTs && t.getTime() > endTs) continue;
-      const y = Number(r.value);
+      const propId = propsList.find(x => x.name === oneProperty)?.id;
+      const conv2 = propId ? sysMap2[propId] : null;
+      let y = Number(r.value);
+      if (conv2) y = y * Number(conv2.scale_factor ?? 1) + Number(conv2.offset ?? 0);
       if (!isFinite(y)) continue;
       if (!pointsByInstance[instName]) pointsByInstance[instName] = [];
       pointsByInstance[instName].push({ x: t, y });
@@ -533,6 +629,18 @@ export default function VisualAnalysisBuilder() {
             <Card.Body>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div>
+                  <Form.Label className="ds-title">Unit System</Form.Label>
+                  <Form.Select
+                    className="ds-input form-select"
+                    value={selectedUnitSystemId || ""}
+                    onChange={e => setSelectedUnitSystemId(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    {unitSystems.map(us => (
+                      <option key={us.id} value={us.id}>{us.name}</option>
+                    ))}
+                  </Form.Select>
+                </div>
+                <div>
                   <Form.Label className="ds-title">Scenarios</Form.Label>
                   <Form.Select
                     multiple
@@ -599,19 +707,27 @@ export default function VisualAnalysisBuilder() {
                     const series = buildSeriesForPanel(panel);
                     const entries = Object.entries(series.seriesMap);
                     const data = {
-                      datasets: entries.map(([label, pts], di) => ({
-                        label,
-                        data: pts,
-                        borderColor: COLORS[di % COLORS.length],
-                        backgroundColor: `${COLORS[di % COLORS.length]}33`,
-                        borderWidth: 2,
-                        tension: 0.2,
-                        fill: false,
-                        pointRadius: 2,
-                      }))
+                      datasets: entries.map(([label, pts], di) => {
+                        let finalLabel = label;
+                        if (series.mode === 'property') {
+                          finalLabel = withAliasAndUnit(panel.type, label);
+                        }
+                        return {
+                          label: finalLabel,
+                          data: pts,
+                          borderColor: COLORS[di % COLORS.length],
+                          backgroundColor: `${COLORS[di % COLORS.length]}33`,
+                          borderWidth: 2,
+                          tension: 0.2,
+                          fill: false,
+                          pointRadius: 2,
+                        };
+                      })
                     };
                     const panelTitle = (() => {
-                      const propLabel = (panel.properties && panel.properties.length > 0) ? panel.properties.join(', ') : (panel.property || 'Property');
+                      const propLabel = (panel.properties && panel.properties.length > 0)
+                        ? panel.properties.map(n => withAliasAndUnit(panel.type, n)).join(', ')
+                        : withAliasAndUnit(panel.type, panel.property || 'Property');
                       const base = `${propLabel} — ${isScenarioCompare ? 'Scenario Comparison' : componentName}`;
                       const instLabel = isScenarioCompare
                         ? (panel.instances && panel.instances[0])

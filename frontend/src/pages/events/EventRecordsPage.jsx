@@ -385,8 +385,19 @@ export default function EventRecordsPage() {
       const instanceId = (instanceOptions[r.object_type] || []).find(i => i.name === r.object_instance)?.id;
       const propId = (propertyOptions[r.object_type] || []).find(p => p.name === r.object_type_property)?.id;
 
+      // Normalize date_time to ISO8601 with timezone (UTC)
+      let dtOut = r.date_time;
+      try {
+        if (dtOut) {
+          const hasTime = String(dtOut).includes('T');
+          const d = new Date(hasTime ? dtOut : `${dtOut}T00:00:00`);
+          if (!isNaN(d.getTime())) dtOut = d.toISOString();
+        }
+      } catch {}
+
       return {
         ...r,
+        date_time: dtOut,
         object_type: typeId,
         object_instance: instanceId,
         object_type_property: propId,
