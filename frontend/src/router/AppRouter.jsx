@@ -11,6 +11,7 @@ import VisualAnalysisBuilder from "../pages/visual/VisualAnalysisBuilder";
 import DataSourcePage from "../pages/DataSourcePage";
 import Scenarios from "../pages/scenario/Scenarios";
 import Scheduler from "../pages/scheduler/WorkflowSchedulerPage";
+import ScenarioResultsPage from "../pages/results/ScenarioResultsPage";
 import { isAuthenticated } from "../utils/auth";
 import MainLayout from "../layouts/MainLayout";
 
@@ -51,6 +52,7 @@ export default function AppRouter() {
           />
           <Route path="components/pi/:id" element={<PiRecordsPage />} />
           <Route path="scenarios" element={<Scenarios />} />
+          <Route path="scenarios/:scenarioId/results" element={<ScenarioResultsPage />} />
           <Route path="scheduler" element={<Scheduler />} />
           <Route path="settings" element={<Settings />} />
         </Route>

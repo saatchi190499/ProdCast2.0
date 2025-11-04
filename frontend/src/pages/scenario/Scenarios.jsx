@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, Button, Form, Table, Modal } from "react-bootstrap";
 import api from "../../utils/axiosInstance";
 import { useTranslation } from "react-i18next";
@@ -7,7 +8,7 @@ import StartScenarioModal from "./StartScenarioModal";
 import { FaRegClipboard } from "react-icons/fa";
 import WorkerStatusPanel from "./WorkerStatusModal";
 
-function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs }) {
+function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs, onRowDoubleClick }) {
   const { t } = useTranslation();
   const columns = [
     { key: "scenario_name", label: t("componentName") },
@@ -48,7 +49,12 @@ function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs }) {
         </thead>
         <tbody>
           {scenarios.map(s => (
-            <tr key={s.scenario_id} className="ds-row">
+            <tr
+              key={s.scenario_id}
+              className="ds-row"
+              onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(s)}
+              style={{ cursor: onRowDoubleClick ? "pointer" : undefined }}
+            >
               <td>{s.scenario_name}</td>
               <td>{s.created_by || "—"}</td>
               <td>{s.created_date ? new Date(s.created_date).toLocaleString() : "—"}</td>
@@ -93,6 +99,7 @@ function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs }) {
 }
 
 export default function ScenariosPage() {
+  const navigate = useNavigate();
   const [scenarios, setScenarios] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const { role } = useAuth();
@@ -276,6 +283,7 @@ export default function ScenariosPage() {
         sortAsc={sortAsc}
         onSort={handleSort}
         onShowLogs={handleShowLogs}
+        onRowDoubleClick={(s) => navigate(`/scenarios/${s.scenario_id}/results`)}
       />
 
       {/* Create Scenario Modal */}
