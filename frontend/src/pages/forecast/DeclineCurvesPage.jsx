@@ -1,4 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../utils/axiosInstance";
 import { Card, Table, Button, Form, Spinner, Alert } from "react-bootstrap";
@@ -57,6 +69,56 @@ export default function DeclineCurvesPage() {
       : Array.isArray(val)
       ? val
       : [];
+
+  // Build chart data for XY: x = CumGasProd, y = ReservoirPressure
+  const xKey = "CumGasProd";
+  const yKey = "ReservoirPressure";
+  const colorAt = (i) => {
+    const palette = [
+      "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+      "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+    ];
+    return palette[i % palette.length];
+  };
+  const chartData = useMemo(() => {
+    const points = rows
+      .map((r) => {
+        const xv = r?.[xKey];
+        const yv = r?.[yKey];
+        const x = typeof xv === "number" ? xv : parseFloat(String(xv ?? "").replace(",", "."));
+        const y = typeof yv === "number" ? yv : parseFloat(String(yv ?? "").replace(",", "."));
+        return isFinite(x) && isFinite(y) ? { x, y } : null;
+      })
+      .filter(Boolean);
+    return {
+      datasets: [
+        {
+          label: `${yKey} vs ${xKey}`,
+          data: points,
+          borderColor: colorAt(0),
+          backgroundColor: colorAt(0) + "66",
+          pointRadius: 3,
+          showLine: true,
+          tension: 0.25,
+          fill: false,
+        },
+      ],
+    };
+  }, [rows]);
+  const chartOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "nearest", intersect: false },
+    plugins: {
+      legend: { position: "top" },
+      title: { display: true, text: `${t("chart") || "Chart"}: ${yKey} vs ${xKey}` },
+      tooltip: { callbacks: { label: (ctx) => `${yKey}: ${ctx.parsed.y}, ${xKey}: ${ctx.parsed.x}` } },
+    },
+    scales: {
+      x: { type: "linear", title: { display: true, text: xKey } },
+      y: { type: "linear", title: { display: true, text: yKey }, beginAtZero: false },
+    },
+  }), [t]);
 
   const buildRowsFromInstance = (instanceName, props) => {
     const seriesProps = props.filter((p) => !SINGLE_VALUE_PROPS.has(p));
@@ -146,22 +208,15 @@ export default function DeclineCurvesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedInstance, selectedProps, existingMap, loading]); // Properties are not selectable; we always show all TANK properties\n
 
-  const addRow = () => {
-    const last = rows[rows.length - 1] || {};
-    const empty = {};
-    selectedProps.forEach((p) => (empty[p] = ""));
-    setRows([...rows, { ...empty }]);
-  };
-
-  const removeLastRow = () => {
-    if (rows.length > 0) setRows(rows.slice(0, -1));
-  };
+  // Row add/remove controls removed per request
 
   const handleCellChange = (rowIdx, prop, value) => {
     const copy = [...rows];
     copy[rowIdx] = { ...(copy[rowIdx] || {}), [prop]: value };
     setRows(copy);
   };
+
+  const fileInputRef = useRef(null);
 
   const handleImportCSV = (e) => {
     const file = e.target.files?.[0];
@@ -173,6 +228,7 @@ export default function DeclineCurvesPage() {
         const rowsForInstance = res.data.filter((r) => String(r.Name || "").trim() === selectedInstance);
         if (!rowsForInstance.length) {
           alert(`No rows for instance ${selectedInstance}`);
+          if (fileInputRef.current) fileInputRef.current.value = "";
           return;
         }
         // Map CSV columns to selected properties (case-insensitive)
@@ -188,26 +244,20 @@ export default function DeclineCurvesPage() {
         });
         setRows(remapped);
 
+        // Single-value properties are only taken from the first row (to match export)
         const singles = {};
+        const firstRow = rowsForInstance[0] || {};
         selectedProps
           .filter((p) => SINGLE_VALUE_PROPS.has(p))
           .forEach((p) => {
-            const key = Object.keys(rowsForInstance[0]).find((k) => norm(k) === norm(p));
-            let val = "";
-            if (key) {
-              for (const r of rowsForInstance) {
-                const cell = r[key];
-                if (cell !== undefined && String(cell).trim() !== "") {
-                  val = String(cell);
-                  break;
-                }
-              }
-            }
+            const key = Object.keys(firstRow).find((k) => norm(k) === norm(p));
+            const val = key ? String(firstRow[key] ?? "") : "";
             singles[p] = val;
           });
         setSingleValues((prev) => ({ ...prev, ...singles }));
+        if (fileInputRef.current) fileInputRef.current.value = "";
       },
-      error: (err) => alert(err.message),
+      error: (err) => { alert(err.message); if (fileInputRef.current) fileInputRef.current.value = ""; },
     });
   };
 
@@ -231,15 +281,14 @@ export default function DeclineCurvesPage() {
           rowOut[p] = String(r?.[p] ?? "").trim();
         });
         if (idx === 0) {
+          // Fill single-value properties only on the first row
           singleProps.forEach((p) => {
             rowOut[p] = String(singleValues[p] ?? "").trim();
           });
         } else {
+          // Leave single-value properties empty on subsequent rows
           singleProps.forEach((p) => { rowOut[p] = ""; });
         }
-        singleProps.forEach((p) => {
-          rowOut[p] = String(singleValues[p] ?? "").trim();
-        });
         return header
           .map((k) => `"${String(rowOut[k] ?? "").replace(/"/g, '""')}"`)
           .join(",");
@@ -253,52 +302,7 @@ export default function DeclineCurvesPage() {
       alert(t("saveError") || "Export error");
     }
   };
-  const [showPaste, setShowPaste] = useState(false);
-  const [pasteText, setPasteText] = useState("");
-  const handleApplyPaste = () => {
-    const res = Papa.parse(pasteText, { header: true, skipEmptyLines: true });
-    const data = Array.isArray(res.data) ? res.data : [];
-    let rowsForInstance = data;
-    if (data.length && Object.prototype.hasOwnProperty.call(data[0], "Name")) {
-      rowsForInstance = data.filter((r) => String(r.Name || "").trim() === selectedInstance);
-    }
-    if (!rowsForInstance.length) {
-      alert(`No rows for instance ${selectedInstance}`);
-      return;
-    }
-    const norm = (s) => String(s || "").trim().toLowerCase();
-    const seriesProps = selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p));
-    const remapped = rowsForInstance.map((r) => {
-      const out = {};
-      for (const p of seriesProps) {
-        const key = Object.keys(r).find((k) => norm(k) === norm(p));
-        out[p] = key ? String(r[key] ?? "") : "";
-      }
-      return out;
-    });
-    setRows(remapped);
-
-    const singles = {};
-    selectedProps
-      .filter((p) => SINGLE_VALUE_PROPS.has(p))
-      .forEach((p) => {
-        const key = Object.keys(rowsForInstance[0]).find((k) => norm(k) === norm(p));
-        let val = "";
-        if (key) {
-          for (const r of rowsForInstance) {
-            const cell = r[key];
-            if (cell !== undefined && String(cell).trim() !== "") {
-              val = String(cell);
-              break;
-            }
-          }
-        }
-        singles[p] = val;
-      });
-    setSingleValues((prev) => ({ ...prev, ...singles }));
-    setShowPaste(false);
-    setPasteText("");
-  };
+  // Paste import removed per request
 
   const handleSave = async () => {
     try {
@@ -384,8 +388,7 @@ export default function DeclineCurvesPage() {
       <div className="d-flex justify-content-between mb-3 align-items-center">
         <h4 className="ds-heading">{t("Decline Curves") || "Decline Curves"} · {componentName}</h4>
         <div className="d-flex gap-2">
-          <Button variant="none" className="btn-secondary" onClick={addRow}>{t("addRow") || "Add Row"}</Button>
-          <Button variant="none" className="btn-secondary" onClick={removeLastRow}>{t("remove") || "Remove Last"}</Button>
+          {/* Add/Remove buttons removed per request */}
           <Button variant="none" className="btn-brand" onClick={handleSave}>{t("save") || "Save"}</Button>
           <Button variant="none" className="btn-secondary" onClick={handleExportCSV}>{t("export") || "Export CSV"}</Button>
           <Button variant="none" className="btn-secondary" onClick={() => navigate(-1)}>{t("back") || "Back"}</Button>
@@ -409,22 +412,24 @@ export default function DeclineCurvesPage() {
 
         <Form.Group>
           <Form.Label>{t("importCSV") || "Import CSV"}</Form.Label>
-          <Form.Control className="ds-input" type="file" accept=".csv" onChange={handleImportCSV} />
+          <Form.Control ref={fileInputRef} className="ds-input" type="file" accept=".csv" onChange={handleImportCSV} />
         </Form.Group>
 
-        <Form.Group>
-          <Form.Label>{t("pasteData") || "Paste Data"}</Form.Label>
-          <div>
-            <Button variant="none" className="btn-secondary" onClick={() => setShowPaste(true)}>
-              {t("paste") || "Paste"}
-            </Button>
-          </div>
-        </Form.Group>
+        {/* Paste UI removed per request */}
       </div>
 
       <div className="mb-3">
         <div className="fw-semibold mb-2">{t("properties") || "Properties"}</div>
         <div className="text-muted">{t("showingAllProperties") || "Showing all properties for TANK."}</div>
+      </div>
+
+      {/* Series Chart */}
+      <div className="mb-4" style={{ height: 360 }}>
+        <Card className="p-3">
+          <div style={{ height: 300 }}>
+            <Line data={chartData} options={chartOptions} />
+          </div>
+        </Card>
       </div>
 
       {selectedProps.some((p) => SINGLE_VALUE_PROPS.has(p)) && (
@@ -474,36 +479,7 @@ export default function DeclineCurvesPage() {
         </Table>
       </div>
 
-      {showPaste && (
-        <div className="modal show" style={{ display: 'block' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">{t("pasteData") || "Paste Data"}</h5>
-                <button type="button" className="btn-close" onClick={() => setShowPaste(false)} />
-              </div>
-              <div className="modal-body">
-                <Form.Control
-                  as="textarea"
-                  rows={10}
-                  className="ds-input"
-                  placeholder={"Paste CSV with headers (Name, property columns)"}
-                  value={pasteText}
-                  onChange={(e) => setPasteText(e.target.value)}
-                />
-              </div>
-              <div className="modal-footer">
-                <Button variant="none" className="btn-ghost" onClick={() => setShowPaste(false)}>
-                  {t("cancel") || "Cancel"}
-                </Button>
-                <Button variant="none" className="btn-brand" onClick={handleApplyPaste}>
-                  {t("apply") || "Apply"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Paste modal removed per request */}
     </Card>
   );
 }
