@@ -91,7 +91,10 @@ export default function VisualAnalysisBuilder() {
     const loadScenarios = async () => {
       try {
         const scRes = await api.get(`/scenarios/all/`);
-        setScenarios(scRes.data || []);
+        const all = scRes.data || [];
+        // Hide scenarios with ERROR status from the selector
+        const filtered = all.filter(s => String(s.status).toUpperCase() !== "ERROR");
+        setScenarios(filtered);
       } catch (e) {
         console.warn("Failed to load scenarios", e);
       }

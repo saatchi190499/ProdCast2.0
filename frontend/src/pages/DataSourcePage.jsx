@@ -276,6 +276,15 @@ export default function DataSourcePage() {
               onChange={() => setShowOnlyUser((v) => !v)}
               className="brand-switch fw-semibold"
             />
+            {sourceName === "Events" && (
+              <Button
+                onClick={() => navigate("/components/events/compare")}
+                variant="none"
+                className="btn-secondary"
+              >
+                Compare
+              </Button>
+            )}
             {/* Add button only if not guest and not OUTPUT */}
             {role !== "guest" && sourceType !== "OUTPUT" && (
               <Button
@@ -412,16 +421,6 @@ export default function DataSourcePage() {
                     </td>
                     <td>{c.description}</td>
                     <td className="d-flex gap-2">
-                      {sourceName === "Events" && (
-                        <Button
-                          variant="none"
-                          size="sm"
-                          className="btn-brand"
-                          onClick={() => navigate(`/components/analysis/${c.id}`)}
-                        >
-                          {t("analyze") || "Analyze"}
-                        </Button>
-                      )}
                       {(user?.username === c.created_by || role === "admin") && (
                         <Button
                           variant="outline-danger"
