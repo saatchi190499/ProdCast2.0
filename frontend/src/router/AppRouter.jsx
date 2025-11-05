@@ -8,6 +8,7 @@ import NotebookEditor from "../pages/notebook/NotebookEditor";
 import PiRecordsPage from "../pages/pi/PiRecordsPage";
 import { PetexTipsProvider } from "../pages/notebook/context/PetexTipsContext";
 import VisualAnalysisBuilder from "../pages/visual/VisualAnalysisBuilder";
+import DeclineCurvesPage from "../pages/forecast/DeclineCurvesPage";
 import DataSourcePage from "../pages/DataSourcePage";
 import Scenarios from "../pages/scenario/Scenarios";
 import Scheduler from "../pages/scheduler/WorkflowSchedulerPage";
@@ -41,6 +42,7 @@ export default function AppRouter() {
           <Route path="components/events/:id" element={<EventRecordsPage />} />
           <Route path="components/events/compare" element={<EventComparePage />} />
           <Route path="components/visual-analysis/:id" element={<VisualAnalysisBuilder />} />
+          <Route path="components/decline-curves/:id" element={<DeclineCurvesPage />} />
           {/* <Route path="components/workflows/:id" element={<WorkflowRecordsPage />} /> */}
           <Route
             path="components/workflows/:id"

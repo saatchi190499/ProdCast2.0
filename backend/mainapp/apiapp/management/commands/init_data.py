@@ -10,6 +10,7 @@ class Command(BaseCommand):
         data_sources = [
             ("Models", "FORECAST"),
             ("Events", "FORECAST"),
+            ("Decline Curves", "FORECAST"),
             ("PI System", "SOURCE"),
             ("Workflows", "WORKFLOW"),
         ]

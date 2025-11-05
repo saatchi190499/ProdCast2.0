@@ -398,6 +398,13 @@ export default function DataSourcePage() {
                           alert(t("editOnlyAuthor"));
                         }
                       }
+                      if (sourceName === "Decline Curves") {
+                        if (user?.username === c.created_by || role === "admin") {
+                          navigate(`/components/decline-curves/${c.id}`);
+                        } else {
+                          alert(t("editOnlyAuthor"));
+                        }
+                      }
                     }}
                   >
                     <td>{c.name}</td>

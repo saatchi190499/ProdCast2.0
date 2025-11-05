@@ -89,4 +89,7 @@ urlpatterns = [
     # --- Visual Analysis ---
     path("components/visual-analysis/<int:component_id>/config/", VisualAnalysisConfigView.as_view()),
 
+    # --- Decline Curves (Forecast) ---
+    path("components/decline-curves/<int:component_id>/", DeclineCurvesView.as_view()),
+
 ]
