@@ -57,6 +57,7 @@ export default function MainLayout() {
     () => ({
       "Models": "FORECAST",
       "Events": "FORECAST",
+      "Decline Curves": "FORECAST",
       "PI System": "SOURCE",
       "Internal": "SOURCE",
       "Workflows": "WORKFLOW",
@@ -92,7 +93,10 @@ export default function MainLayout() {
   useEffect(() => {
     const path = location.pathname.toLowerCase();
     setOpenMenus({
-      FORECAST: path.startsWith("/forecast") || path.startsWith("/scenarios"),
+      FORECAST:
+        path.startsWith("/forecast") ||
+        path.startsWith("/scenarios") ||
+        path.startsWith("/components/decline-curves"),
       SOURCE: path.startsWith("/source") || path.startsWith("/input"), // keep legacy
       OUTPUT: path.startsWith("/output"),
       VISUAL: path.startsWith("/visual"),
@@ -155,6 +159,7 @@ export default function MainLayout() {
     if (dsName === "Workflows") return `/components/workflows/${compId}`;
     if (dsName === "PI System") return `/components/pi/${compId}`;
     if (dsName === "VisualAnalysis") return `/components/visual-analysis/${compId}`;
+    if (dsName === "Decline Curves") return `/components/decline-curves/${compId}`;
     // Fallback: open the data source page
     return `/input/${dsName}`;
   };
@@ -228,7 +233,8 @@ export default function MainLayout() {
               path.startsWith("/forecast") ||
               path.startsWith("/scenarios") ||
               path.startsWith("/components/events") ||
-              path.startsWith("/components/pi");
+              path.startsWith("/components/pi") ||
+              path.startsWith("/components/decline-curves");
             let icon = <FiBarChart2 />;
             if (isCollapsedUnpinned && isAnyActive) {
               if (path.includes("/models")) icon = <FiPackage />;
@@ -259,7 +265,7 @@ export default function MainLayout() {
                   <div className="inputs-dd">
                     {[...groupSources]
                       .sort((a, b) => {
-                        const order = { Models: 0, Events: 1 };
+                        const order = { Models: 0, Events: 1, "Decline Curves": 2 };
                         const ai = order[a.data_source_name] ?? 99;
                         const bi = order[b.data_source_name] ?? 99;
                         return ai - bi;

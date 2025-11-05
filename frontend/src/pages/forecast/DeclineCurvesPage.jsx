@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../utils/axiosInstance";
 import { Card, Table, Button, Form, Spinner, Alert } from "react-bootstrap";
+import { saveAs } from "file-saver";
 import Papa from "papaparse";
 import { useTranslation } from "react-i18next";
 import "../DataSourcePage.css";
@@ -22,6 +23,7 @@ export default function DeclineCurvesPage() {
   const [selectedInstance, setSelectedInstance] = useState("");
   const [selectedProps, setSelectedProps] = useState([]);
   const [rows, setRows] = useState([]); // Array of { [propName]: value }
+  const [singleValues, setSingleValues] = useState({}); // single-value props
 
   const [existingMap, setExistingMap] = useState({});
   // existingMap structure: { instanceName: { propName: { data_set_id, value } } }
@@ -40,31 +42,43 @@ export default function DeclineCurvesPage() {
   const preferredProps = [
     "ReservoirPressure",
     "CumGasProd",
-    "CurrentGasRat",
-    "Temperature",
-    "OIIP",
-    "GIIP",
   ];
+
+  const SINGLE_VALUE_PROPS = new Set([
+    "CurrentGasProd",
+    "FLUIDTEMP",
+    "GasInPlace",
+    "OilInPlace",
+  ]);
 
   const toArray = (val) =>
     typeof val === "string"
-      ? val.split(",").map((s) => s.trim())
+      ? val.split("|").map((s) => s.trim())
       : Array.isArray(val)
       ? val
       : [];
 
   const buildRowsFromInstance = (instanceName, props) => {
+    const seriesProps = props.filter((p) => !SINGLE_VALUE_PROPS.has(p));
     const mapForInstance = existingMap[instanceName] || {};
-    const arrays = props.map((p) => toArray(mapForInstance[p]?.value || ""));
+    const arrays = seriesProps.map((p) => toArray(mapForInstance[p]?.value || ""));
     const rowCount = Math.max(1, ...arrays.map((a) => a.length));
     const newRows = Array.from({ length: rowCount }, (_, i) => {
       const r = {};
-      props.forEach((p, idx) => {
+      seriesProps.forEach((p, idx) => {
         r[p] = arrays[idx][i] ?? "";
       });
       return r;
     });
     setRows(newRows);
+
+    const singles = {};
+    props
+      .filter((p) => SINGLE_VALUE_PROPS.has(p))
+      .forEach((p) => {
+        singles[p] = (mapForInstance[p]?.value ?? "").toString();
+      });
+    setSingleValues((prev) => ({ ...prev, ...singles }));
   };
 
   const rebuildFromSelections = () => {
@@ -113,10 +127,9 @@ export default function DeclineCurvesPage() {
         const defaultInstance = tankInstFromRes[0]?.name || Object.keys(byInstance)[0] || "";
         setSelectedInstance(defaultInstance);
 
-        // choose preferred props present in TANK property list
+        // Use all TANK properties (show all; no checkboxes)
         const availablePropNames = new Set(tankPropsFromRes.map((p) => p.name));
-        const initialProps = preferredProps.filter((p) => availablePropNames.has(p));
-        setSelectedProps(initialProps.length ? initialProps : Array.from(availablePropNames).slice(0, 4));
+        setSelectedProps(Array.from(availablePropNames));
 
         setLoading(false);
       } catch (e) {
@@ -131,19 +144,7 @@ export default function DeclineCurvesPage() {
   useEffect(() => {
     if (!loading) rebuildFromSelections();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedInstance, selectedProps, existingMap, loading]);
-
-  const handlePropToggle = (propName) => {
-    setSelectedProps((prev) => {
-      const set = new Set(prev);
-      if (set.has(propName)) set.delete(propName);
-      else set.add(propName);
-      const arr = Array.from(set);
-      // rebuild rows with new props
-      buildRowsFromInstance(selectedInstance, arr);
-      return arr;
-    });
-  };
+  }, [selectedInstance, selectedProps, existingMap, loading]); // Properties are not selectable; we always show all TANK properties\n
 
   const addRow = () => {
     const last = rows[rows.length - 1] || {};
@@ -176,30 +177,151 @@ export default function DeclineCurvesPage() {
         }
         // Map CSV columns to selected properties (case-insensitive)
         const norm = (s) => String(s || "").trim().toLowerCase();
-        const selectedLower = new Set(selectedProps.map(norm));
+        const seriesProps = selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p));
         const remapped = rowsForInstance.map((r) => {
           const out = {};
-          for (const p of selectedProps) {
+          for (const p of seriesProps) {
             const key = Object.keys(r).find((k) => norm(k) === norm(p));
             out[p] = key ? String(r[key] ?? "") : "";
           }
           return out;
         });
         setRows(remapped);
+
+        const singles = {};
+        selectedProps
+          .filter((p) => SINGLE_VALUE_PROPS.has(p))
+          .forEach((p) => {
+            const key = Object.keys(rowsForInstance[0]).find((k) => norm(k) === norm(p));
+            let val = "";
+            if (key) {
+              for (const r of rowsForInstance) {
+                const cell = r[key];
+                if (cell !== undefined && String(cell).trim() !== "") {
+                  val = String(cell);
+                  break;
+                }
+              }
+            }
+            singles[p] = val;
+          });
+        setSingleValues((prev) => ({ ...prev, ...singles }));
       },
       error: (err) => alert(err.message),
     });
   };
 
+  // Paste modal support
+  const handleExportCSV = () => {
+    try {
+      if (!selectedInstance) {
+        alert(t("selectInstanceFirst") || "Please select an instance.");
+        return;
+      }
+      const seriesProps = selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p));
+      const singleProps = selectedProps.filter((p) => SINGLE_VALUE_PROPS.has(p));
+
+      // Build header: Name + series columns (+ single columns at end)
+      const header = ["Name", ...seriesProps, ...singleProps];
+
+      // Build one CSV row per series row
+      const lines = rows.map((r, idx) => {
+        const rowOut = { Name: selectedInstance };
+        seriesProps.forEach((p) => {
+          rowOut[p] = String(r?.[p] ?? "").trim();
+        });
+        if (idx === 0) {
+          singleProps.forEach((p) => {
+            rowOut[p] = String(singleValues[p] ?? "").trim();
+          });
+        } else {
+          singleProps.forEach((p) => { rowOut[p] = ""; });
+        }
+        singleProps.forEach((p) => {
+          rowOut[p] = String(singleValues[p] ?? "").trim();
+        });
+        return header
+          .map((k) => `"${String(rowOut[k] ?? "").replace(/"/g, '""')}"`)
+          .join(",");
+      });
+
+      const csv = [header.join(","), ...lines].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      saveAs(blob, `DeclineCurves_${selectedInstance}_${componentName || id}.csv`);
+    } catch (err) {
+      console.error("Export error:", err);
+      alert(t("saveError") || "Export error");
+    }
+  };
+  const [showPaste, setShowPaste] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const handleApplyPaste = () => {
+    const res = Papa.parse(pasteText, { header: true, skipEmptyLines: true });
+    const data = Array.isArray(res.data) ? res.data : [];
+    let rowsForInstance = data;
+    if (data.length && Object.prototype.hasOwnProperty.call(data[0], "Name")) {
+      rowsForInstance = data.filter((r) => String(r.Name || "").trim() === selectedInstance);
+    }
+    if (!rowsForInstance.length) {
+      alert(`No rows for instance ${selectedInstance}`);
+      return;
+    }
+    const norm = (s) => String(s || "").trim().toLowerCase();
+    const seriesProps = selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p));
+    const remapped = rowsForInstance.map((r) => {
+      const out = {};
+      for (const p of seriesProps) {
+        const key = Object.keys(r).find((k) => norm(k) === norm(p));
+        out[p] = key ? String(r[key] ?? "") : "";
+      }
+      return out;
+    });
+    setRows(remapped);
+
+    const singles = {};
+    selectedProps
+      .filter((p) => SINGLE_VALUE_PROPS.has(p))
+      .forEach((p) => {
+        const key = Object.keys(rowsForInstance[0]).find((k) => norm(k) === norm(p));
+        let val = "";
+        if (key) {
+          for (const r of rowsForInstance) {
+            const cell = r[key];
+            if (cell !== undefined && String(cell).trim() !== "") {
+              val = String(cell);
+              break;
+            }
+          }
+        }
+        singles[p] = val;
+      });
+    setSingleValues((prev) => ({ ...prev, ...singles }));
+    setShowPaste(false);
+    setPasteText("");
+  };
+
   const handleSave = async () => {
     try {
-      // Build payload: one record per property
-      const payload = selectedProps.map((propName) => {
+      // Guardrails
+      if (!selectedInstance) {
+        alert(t("selectInstanceFirst") || "Please select an instance.");
+        return;
+      }
+      if (!selectedProps.length) {
+        alert(t("selectAtLeastOneProperty") || "Select at least one property.");
+        return;
+      }
+      // Build payload per selected instance
+      const typeId = typeOptions.find((t) => t.name === TANK)?.id;
+      const instanceId = tankInstances.find((i) => i.name === selectedInstance)?.id;
+
+      const seriesProps = selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p));
+      const singleProps = selectedProps.filter((p) => SINGLE_VALUE_PROPS.has(p));
+
+      const seriesPayload = seriesProps.map((propName) => {
         const colVals = rows.map((r) => (r?.[propName] ?? "").toString().trim());
-        const csv = colVals.join(",");
+        const csv = colVals.join("|");
         const existing = existingMap[selectedInstance]?.[propName];
-        const typeId = typeOptions.find((t) => t.name === TANK)?.id;
-        const instanceId = tankInstances.find((i) => i.name === selectedInstance)?.id;
         const propId = tankProperties.find((p) => p.name === propName)?.id;
         const rec = {
           object_type: typeId || TANK,
@@ -210,6 +332,22 @@ export default function DeclineCurvesPage() {
         if (existing?.data_set_id) rec.data_set_id = existing.data_set_id;
         return rec;
       });
+
+      const singlePayload = singleProps.map((propName) => {
+        const val = (singleValues[propName] ?? "").toString().trim();
+        const existing = existingMap[selectedInstance]?.[propName];
+        const propId = tankProperties.find((p) => p.name === propName)?.id;
+        const rec = {
+          object_type: typeId || TANK,
+          object_instance: instanceId || selectedInstance,
+          object_type_property: propId || propName,
+          value: val,
+        };
+        if (existing?.data_set_id) rec.data_set_id = existing.data_set_id;
+        return rec;
+      });
+
+      const payload = [...seriesPayload, ...singlePayload];
 
       const res = await api.post(`/components/decline-curves/${id}/`, payload);
 
@@ -249,6 +387,7 @@ export default function DeclineCurvesPage() {
           <Button variant="none" className="btn-secondary" onClick={addRow}>{t("addRow") || "Add Row"}</Button>
           <Button variant="none" className="btn-secondary" onClick={removeLastRow}>{t("remove") || "Remove Last"}</Button>
           <Button variant="none" className="btn-brand" onClick={handleSave}>{t("save") || "Save"}</Button>
+          <Button variant="none" className="btn-secondary" onClick={handleExportCSV}>{t("export") || "Export CSV"}</Button>
           <Button variant="none" className="btn-secondary" onClick={() => navigate(-1)}>{t("back") || "Back"}</Button>
         </div>
       </div>
@@ -272,29 +411,46 @@ export default function DeclineCurvesPage() {
           <Form.Label>{t("importCSV") || "Import CSV"}</Form.Label>
           <Form.Control className="ds-input" type="file" accept=".csv" onChange={handleImportCSV} />
         </Form.Group>
+
+        <Form.Group>
+          <Form.Label>{t("pasteData") || "Paste Data"}</Form.Label>
+          <div>
+            <Button variant="none" className="btn-secondary" onClick={() => setShowPaste(true)}>
+              {t("paste") || "Paste"}
+            </Button>
+          </div>
+        </Form.Group>
       </div>
 
       <div className="mb-3">
         <div className="fw-semibold mb-2">{t("properties") || "Properties"}</div>
-        <div className="d-flex flex-wrap gap-3">
-          {tankProperties.map((p) => (
-            <Form.Check
-              key={p.id}
-              type="checkbox"
-              label={p.name}
-              checked={selectedProps.includes(p.name)}
-              onChange={() => handlePropToggle(p.name)}
-            />
-          ))}
-        </div>
+        <div className="text-muted">{t("showingAllProperties") || "Showing all properties for TANK."}</div>
       </div>
+
+      {selectedProps.some((p) => SINGLE_VALUE_PROPS.has(p)) && (
+        <div className="mb-3">
+          <div className="fw-semibold mb-2">{t("singleValues") || "Single Values"}</div>
+          <div className="d-flex flex-wrap gap-3">
+            {selectedProps.filter((p) => SINGLE_VALUE_PROPS.has(p)).map((p) => (
+              <Form.Group key={p} style={{ minWidth: 220 }}>
+                <Form.Label>{p}</Form.Label>
+                <Form.Control
+                  className="ds-input"
+                  value={singleValues[p] ?? ""}
+                  onChange={(e) => setSingleValues((prev) => ({ ...prev, [p]: e.target.value }))}
+                />
+              </Form.Group>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="brand-scroll" style={{ maxHeight: "calc(100vh - 320px)", overflowY: "auto" }}>
         <Table bordered size="sm" className="rounded ds-table">
           <thead className="ds-thead sticky-top">
             <tr>
               <th>#</th>
-              {selectedProps.map((p) => (
+              {selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p)).map((p) => (
                 <th key={p}>{p}</th>
               ))}
             </tr>
@@ -303,7 +459,7 @@ export default function DeclineCurvesPage() {
             {rows.map((r, idx) => (
               <tr key={idx}>
                 <td>{idx + 1}</td>
-                {selectedProps.map((p) => (
+                {selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p)).map((p) => (
                   <td key={p}>
                     <Form.Control
                       className="ds-input"
@@ -317,6 +473,37 @@ export default function DeclineCurvesPage() {
           </tbody>
         </Table>
       </div>
+
+      {showPaste && (
+        <div className="modal show" style={{ display: 'block' }}>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">{t("pasteData") || "Paste Data"}</h5>
+                <button type="button" className="btn-close" onClick={() => setShowPaste(false)} />
+              </div>
+              <div className="modal-body">
+                <Form.Control
+                  as="textarea"
+                  rows={10}
+                  className="ds-input"
+                  placeholder={"Paste CSV with headers (Name, property columns)"}
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                />
+              </div>
+              <div className="modal-footer">
+                <Button variant="none" className="btn-ghost" onClick={() => setShowPaste(false)}>
+                  {t("cancel") || "Cancel"}
+                </Button>
+                <Button variant="none" className="btn-brand" onClick={handleApplyPaste}>
+                  {t("apply") || "Apply"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

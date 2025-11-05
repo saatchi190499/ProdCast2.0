@@ -284,6 +284,7 @@ class DeclineCurvesView(APIView):
 
         existing_records = {r.data_set_id: r for r in MainClass.objects.filter(component=component)}
         sent_ids = set()
+        touched_instance_ids = set()
         results = []
 
         for r in records:
@@ -297,6 +298,8 @@ class DeclineCurvesView(APIView):
                 if serializer.is_valid():
                     obj = serializer.save()
                     sent_ids.add(rec_id)
+                    if obj.object_instance_id:
+                        touched_instance_ids.add(obj.object_instance_id)
                     results.append({"id": obj.data_set_id, "status": "updated", "value": obj.value})
                 else:
                     results.append({"id": rec_id, "status": "error", "errors": serializer.errors})
@@ -305,12 +308,15 @@ class DeclineCurvesView(APIView):
                 if serializer.is_valid():
                     obj = serializer.save()
                     sent_ids.add(obj.data_set_id)
+                    if obj.object_instance_id:
+                        touched_instance_ids.add(obj.object_instance_id)
                     results.append({"id": obj.data_set_id, "status": "created", "value": obj.value})
                 else:
                     results.append({"status": "error", "errors": serializer.errors})
 
-        for rec_id, obj in existing_records.items():
-            if rec_id not in sent_ids:
+        # Delete only records for instances we touched in this request
+        for rec_id, obj in list(existing_records.items()):
+            if rec_id not in sent_ids and (obj.object_instance_id in touched_instance_ids):
                 obj.delete()
                 results.append({"id": rec_id, "status": "deleted"})
 

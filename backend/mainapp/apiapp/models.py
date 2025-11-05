@@ -341,7 +341,7 @@ class MainClass(models.Model):
         verbose_name="Object Type Property"
     )
 
-    value = models.CharField(max_length=100, db_column='value', null=True, blank=True)
+    value = models.TextField(db_column='value', null=True, blank=True)
     date_time = models.DateTimeField("Date", db_column='date', null=True)
     # ⬇️ УДАЛЕНО: sub_data_source = models.CharField(...)
     tag = models.CharField("Tag", max_length=100, blank=True, null=True)
