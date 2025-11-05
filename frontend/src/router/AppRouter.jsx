@@ -3,6 +3,7 @@ import Login from "../pages/Login";
 import Dashboard from "../pages/Dashboard";
 import Settings from "../pages/Settings";
 import EventRecordsPage from "../pages/events/EventRecordsPage";
+import EventComparePage from "../pages/events/EventComparePage";
 import NotebookEditor from "../pages/notebook/NotebookEditor";
 import PiRecordsPage from "../pages/pi/PiRecordsPage";
 import MainClassAnalysisPage from "../pages/analysis/MainClassAnalysisPage";
@@ -39,6 +40,7 @@ export default function AppRouter() {
           <Route index element={<Dashboard />} />
           <Route path=":sourceType/:sourceName" element={<DataSourcePage />} />
           <Route path="components/events/:id" element={<EventRecordsPage />} />
+          <Route path="components/events/compare" element={<EventComparePage />} />
           <Route path="components/analysis/:id" element={<MainClassAnalysisPage />} />
           <Route path="components/visual-analysis/:id" element={<VisualAnalysisBuilder />} />
           {/* <Route path="components/workflows/:id" element={<WorkflowRecordsPage />} /> */}
