@@ -98,6 +98,7 @@
     "visualAnalysis": "Visual Analysis",
     "exportCSV": "Export CSV",
     "importCSV": "Import CSV",
-    "unitSystem": "Unit System"
+    "unitSystem": "Unit System",
+    "declineCurves": "Decline Curves"
 
 }

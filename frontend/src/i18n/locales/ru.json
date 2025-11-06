@@ -95,6 +95,7 @@
     "workflow": "Процессы",
     "equip_management": "Управление оборудованием",
     "scheduler": "Задачи",
-    "forecast": "Прогноз"
+    "forecast": "Прогноз",
+    "declineCurves": "Кривые падения"
 
 }

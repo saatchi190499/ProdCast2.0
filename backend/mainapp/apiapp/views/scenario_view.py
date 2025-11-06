@@ -50,10 +50,11 @@ class ScenarioCreateView(APIView):
 
 class ComponentsByDataSourceView(APIView):
     """
-    GET: Returns components grouped by data source
+    GET: Returns components grouped by data source.
+    For creating scenarios, only include data sources of type 'Forecast'.
     """
     def get(self, request):
-        sources = DataSource.objects.all()
+        sources = DataSource.objects.filter(data_source_type="FORECAST")
         result = []
         for source in sources:
             comps = DataSourceComponent.objects.filter(data_source=source)
@@ -100,3 +101,16 @@ class ScenarioLogsView(APIView):
         logs = scenario.logs.order_by("timestamp")
         serializer = ScenarioLogSerializer(logs, many=True)
         return Response(serializer.data)
+
+class ScenarioDeleteView(APIView):
+    """Delete a scenario by ID with basic permission check."""
+    def delete(self, request, scenario_id):
+        scenario = get_object_or_404(ScenarioClass, scenario_id=scenario_id)
+        user = request.user if hasattr(request, "user") else None
+
+        # Allow delete for superusers/admins or the scenario creator
+        if user and (getattr(user, "is_superuser", False) or scenario.created_by_id == getattr(user, "id", None)):
+            scenario.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)

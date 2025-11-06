@@ -8,7 +8,7 @@ import StartScenarioModal from "./StartScenarioModal";
 import { FaRegClipboard } from "react-icons/fa";
 import WorkerStatusPanel from "./WorkerStatusModal";
 
-function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs, onRowDoubleClick }) {
+function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs, onRowDoubleClick, onDelete, canDelete }) {
   const { t } = useTranslation();
   const columns = [
     { key: "scenario_name", label: t("componentName") },
@@ -20,8 +20,10 @@ function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs, onRowD
     { key: "server", label: t("server") },
     { key: "models", label: t("model") },
     { key: "events", label: t("event") },
+    { key: "decline_curves", label: t("declineCurves") || "Decline Curves" },
     { key: "is_approved", label: t("approved") },
-    { key: "description", label: t("description") }
+    { key: "description", label: t("description") },
+    { key: "actions", label: t("actions") || "Actions" }
   ];
 
   const headerClass = (key) =>
@@ -88,8 +90,25 @@ function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs, onRowD
                   .map(c => c.name)
                   .join(", ") || "—"}
               </td>
+              <td>
+                {(s.components || [])
+                  .filter(c => c.data_source_name === "Decline Curves")
+                  .map(c => c.name)
+                  .join(", ") || "—"}
+              </td>
               <td>{s.is_approved ? "✔" : "—"}</td>
               <td>{s.description}</td>
+              <td style={{ whiteSpace: "nowrap" }}>
+                {canDelete && (
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); onDelete && onDelete(s); }}
+                  >
+                    {t("delete")}
+                  </Button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -200,6 +219,16 @@ export default function ScenariosPage() {
     setSaving(false);
   };
 
+  const handleDeleteScenario = async (s) => {
+    if (!window.confirm(t("deleteConfirm") || "Delete this scenario?")) return;
+    try {
+      await api.delete(`/scenarios/${s.scenario_id}/delete/`);
+      await fetchScenarios();
+    } catch (err) {
+      alert(t("deleteError") || ("Error deleting: " + err.message));
+    }
+  };
+
   // Filter scenarios by search and user
   const filteredScenarios = scenarios.filter(s => {
     const matchesSearch = (s.scenario_name || "").toLowerCase().includes(searchText.toLowerCase());
@@ -284,6 +313,8 @@ export default function ScenariosPage() {
         onSort={handleSort}
         onShowLogs={handleShowLogs}
         onRowDoubleClick={(s) => navigate(`/scenarios/${s.scenario_id}/results`)}
+        onDelete={handleDeleteScenario}
+        canDelete={role !== "guest"}
       />
 
       {/* Create Scenario Modal */}
