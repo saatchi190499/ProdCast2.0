@@ -101,7 +101,8 @@ function ScenarioTable({ scenarios, sortKey, sortAsc, onSort, onShowLogs, onRowD
               <td style={{ whiteSpace: "nowrap" }}>
                 {canDelete && (
                   <Button
-                    variant="outline-danger"
+                    className="btn-brand"
+                    variant="None"
                     size="sm"
                     onClick={(e) => { e.stopPropagation(); onDelete && onDelete(s); }}
                   >
