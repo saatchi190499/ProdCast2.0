@@ -95,7 +95,8 @@
     "equip_management": "Equipment Management",
     "scheduler": "Scheduler",
     "forecast": "Forecast",
-    "visualAnalysis": "Visual Analysis"
-    
+    "visualAnalysis": "Visual Analysis",
+    "exportCSV": "Export CSV",
+    "importCSV": "Import CSV"
 
 }

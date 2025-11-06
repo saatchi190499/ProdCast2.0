@@ -331,3 +331,67 @@ html[data-theme="violet"] {
     transform: rotate(360deg);
   }
 }
+/* =========================
+   DeclineCurvesPage Layout
+   ========================= */
+
+.decline-split {
+  display: flex;
+  height: calc(100vh - 100px);
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+.left-pane.compact {
+  width: 25%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.5rem;
+  border-right: 1px solid var(--brand-outline);
+}
+
+.right-pane {
+  width: 75%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--brand-outline);
+  min-height: 200px;
+}
+
+/* Make header sticky */
+.table-wrapper thead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--brand);
+  color: var(--brand-text-on);
+}
+
+/* Compact forms and spacing */
+.ds-heading {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.ds-table th,
+.ds-table td {
+  padding: 0.3rem 0.5rem;
+  vertical-align: middle;
+  font-size: 0.85rem;
+}
+
+.ds-input {
+  font-size: 0.85rem;
+  height: 28px;
+  padding: 2px 6px;
+}

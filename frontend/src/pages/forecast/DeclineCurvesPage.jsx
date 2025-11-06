@@ -67,8 +67,8 @@ export default function DeclineCurvesPage() {
     typeof val === "string"
       ? val.split("|").map((s) => s.trim())
       : Array.isArray(val)
-      ? val
-      : [];
+        ? val
+        : [];
 
   // Build chart data for XY: x = CumGasProd, y = ReservoirPressure
   const xKey = "CumGasProd";
@@ -384,102 +384,131 @@ export default function DeclineCurvesPage() {
   if (error) return <Alert variant="danger">{error}</Alert>;
 
   return (
-    <Card className="ds-card p-4">
-      <div className="d-flex justify-content-between mb-3 align-items-center">
-        <h4 className="ds-heading">{t("Decline Curves") || "Decline Curves"} · {componentName}</h4>
-        <div className="d-flex gap-2">
-          {/* Add/Remove buttons removed per request */}
-          <Button variant="none" className="btn-brand" onClick={handleSave}>{t("save") || "Save"}</Button>
-          <Button variant="none" className="btn-secondary" onClick={handleExportCSV}>{t("export") || "Export CSV"}</Button>
-          <Button variant="none" className="btn-secondary" onClick={() => navigate(-1)}>{t("back") || "Back"}</Button>
+  <Card className="ds-card p-3 decline-page">
+    <div className="decline-split">
+      {/* Left pane (compact 25%) */}
+      <div className="left-pane compact">
+        {/* Toolbar */}
+        <div className="toolbar-top">
+          <h5 className="ds-heading mb-2">
+            {t("Decline Curves") || "Decline Curves"} · {componentName}
+          </h5>
+
+          {/* Action buttons */}
+          <div className="d-flex flex-wrap gap-2 mb-3">
+            <Button size="sm" variant="None" className="btn-brand" onClick={handleSave}>
+              {t("save") || "Save"}
+            </Button>
+            <Button size="sm" variant="None" className="btn-brand" onClick={handleExportCSV}>
+              {t("exportCSV") || "Export"}
+            </Button>
+            <Button size="sm" variant="None" className="btn-brand" onClick={() => navigate(-1)}>
+              {t("back") || "Back"}
+            </Button>
+          </div>
+
+          {/* Instance selector + Import CSV on same row */}
+          <div className="d-flex justify-content-between align-items-end mb-3">
+            <Form.Group style={{ flexGrow: 1, marginRight: "0.5rem" }}>
+              <Form.Label>{t("instance") || "Instance"}</Form.Label>
+              <Form.Select
+                size="sm"
+                className="ds-input"
+                value={selectedInstance}
+                onChange={(e) => setSelectedInstance(e.target.value)}
+              >
+                {tankInstances.map((i) => (
+                  <option key={i.id} value={i.name}>
+                    {i.name}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+
+            {/* CSV upload on the right */}
+            <Form.Group style={{ minWidth: 120 }}>
+              <Form.Label>{t("importCSV") || "Import CSV"}</Form.Label>
+              <Form.Control
+                ref={fileInputRef}
+                size="sm"
+                className="ds-input"
+                type="file"
+                accept=".csv"
+                onChange={handleImportCSV}
+              />
+            </Form.Group>
+          </div>
+
+          {/* Single-value properties just below */}
+          {selectedProps.some((p) => SINGLE_VALUE_PROPS.has(p)) && (
+            <div className="single-values mb-3">
+              
+              <div className="d-flex flex-wrap gap-2">
+                {selectedProps
+                  .filter((p) => SINGLE_VALUE_PROPS.has(p))
+                  .map((p) => (
+                    <Form.Group key={p} style={{ minWidth: 140 }}>
+                      <Form.Label className="small">{p}</Form.Label>
+                      <Form.Control
+                        size="sm"
+                        className="ds-input"
+                        value={singleValues[p] ?? ""}
+                        onChange={(e) =>
+                          setSingleValues((prev) => ({ ...prev, [p]: e.target.value }))
+                        }
+                      />
+                    </Form.Group>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Scrollable Table */}
+        <div className="table-wrapper flex-grow-1">
+          <Table bordered size="sm" className="rounded ds-table">
+            <thead>
+              <tr>
+                <th style={{ width: "40px" }}>#</th>
+                {selectedProps
+                  .filter((p) => !SINGLE_VALUE_PROPS.has(p))
+                  .map((p) => (
+                    <th key={p}>{p}</th>
+                  ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, idx) => (
+                <tr key={idx}>
+                  <td>{idx + 1}</td>
+                  {selectedProps
+                    .filter((p) => !SINGLE_VALUE_PROPS.has(p))
+                    .map((p) => (
+                      <td key={p}>
+                        <Form.Control
+                          size="sm"
+                          className="ds-input"
+                          value={r?.[p] ?? ""}
+                          onChange={(e) => handleCellChange(idx, p, e.target.value)}
+                        />
+                      </td>
+                    ))}
+                </tr>
+              ))}
+            </tbody>
+          </Table>
         </div>
       </div>
 
-      <div className="d-flex flex-wrap gap-3 align-items-end mb-3">
-        <Form.Group>
-          <Form.Label>{t("instance") || "Instance"}</Form.Label>
-          <Form.Select
-            className="ds-input"
-            value={selectedInstance}
-            onChange={(e) => setSelectedInstance(e.target.value)}
-            style={{ minWidth: 240 }}
-          >
-            {tankInstances.map((i) => (
-              <option key={i.id} value={i.name}>{i.name}</option>
-            ))}
-          </Form.Select>
-        </Form.Group>
-
-        <Form.Group>
-          <Form.Label>{t("importCSV") || "Import CSV"}</Form.Label>
-          <Form.Control ref={fileInputRef} className="ds-input" type="file" accept=".csv" onChange={handleImportCSV} />
-        </Form.Group>
-
-        {/* Paste UI removed per request */}
-      </div>
-
-      <div className="mb-3">
-        <div className="fw-semibold mb-2">{t("properties") || "Properties"}</div>
-        <div className="text-muted">{t("showingAllProperties") || "Showing all properties for TANK."}</div>
-      </div>
-
-      {/* Series Chart */}
-      <div className="mb-4" style={{ height: 360 }}>
-        <Card className="p-3">
-          <div style={{ height: 300 }}>
+      {/* Right pane (chart) */}
+      <div className="right-pane">
+        <Card className="p-3 w-100 h-100">
+          <div className="chart-inner full" style={{ height: "100%" }}>
             <Line data={chartData} options={chartOptions} />
           </div>
         </Card>
       </div>
-
-      {selectedProps.some((p) => SINGLE_VALUE_PROPS.has(p)) && (
-        <div className="mb-3">
-          <div className="fw-semibold mb-2">{t("singleValues") || "Single Values"}</div>
-          <div className="d-flex flex-wrap gap-3">
-            {selectedProps.filter((p) => SINGLE_VALUE_PROPS.has(p)).map((p) => (
-              <Form.Group key={p} style={{ minWidth: 220 }}>
-                <Form.Label>{p}</Form.Label>
-                <Form.Control
-                  className="ds-input"
-                  value={singleValues[p] ?? ""}
-                  onChange={(e) => setSingleValues((prev) => ({ ...prev, [p]: e.target.value }))}
-                />
-              </Form.Group>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="brand-scroll" style={{ maxHeight: "calc(100vh - 320px)", overflowY: "auto" }}>
-        <Table bordered size="sm" className="rounded ds-table">
-          <thead className="ds-thead sticky-top">
-            <tr>
-              <th>#</th>
-              {selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p)).map((p) => (
-                <th key={p}>{p}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, idx) => (
-              <tr key={idx}>
-                <td>{idx + 1}</td>
-                {selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p)).map((p) => (
-                  <td key={p}>
-                    <Form.Control
-                      className="ds-input"
-                      value={r?.[p] ?? ""}
-                      onChange={(e) => handleCellChange(idx, p, e.target.value)}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </div>
-
-      {/* Paste modal removed per request */}
-    </Card>
-  );
+    </div>
+  </Card>
+);
 }
