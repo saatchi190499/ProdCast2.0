@@ -104,6 +104,13 @@ export default function DeclineCurvesPage() {
         ? val
         : [];
 
+  // Avoid float artifacts when converting numbers (e.g., 0.000199999999)
+  const toRoundedString = (num, digits = 8) => {
+    const n = Number(num);
+    if (!isFinite(n)) return "";
+    return String(Number(n.toFixed(digits)));
+  };
+
   // Build chart data for XY: x = CumGasProd, y = ReservoirPressure
   const xKey = "CumGasProd";
   const yKey = "ReservoirPressure";
@@ -577,7 +584,7 @@ export default function DeclineCurvesPage() {
             const pid = propIdByName[p];
             const conv = pid ? sysMap[pid] : null;
             const n = toNum(uiRaw);
-            out[p] = isFinite(n) ? String(invert(n, conv)) : uiRaw;
+            out[p] = isFinite(n) ? toRoundedString(invert(n, conv)) : uiRaw;
           }
           return out;
         });
@@ -594,7 +601,7 @@ export default function DeclineCurvesPage() {
             const pid = propIdByName[p];
             const conv = pid ? sysMap[pid] : null;
             const n = toNum(uiRaw);
-            singles[p] = isFinite(n) ? String(invert(n, conv)) : uiRaw;
+            singles[p] = isFinite(n) ? toRoundedString(invert(n, conv)) : uiRaw;
           });
         setSingleValues((prev) => ({ ...prev, ...singles }));
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -625,7 +632,7 @@ export default function DeclineCurvesPage() {
             const pid = wellPropIdByName[p];
             const conv = pid ? sysMap[pid] : null;
             const n = toNum(uiRaw);
-            out[p] = isFinite(n) ? String(invert(n, conv)) : uiRaw;
+            out[p] = isFinite(n) ? toRoundedString(invert(n, conv)) : uiRaw;
           }
           return out;
         });
@@ -641,7 +648,7 @@ export default function DeclineCurvesPage() {
             const pid = wellPropIdByName[p];
             const conv = pid ? sysMap[pid] : null;
             const n = toNum(uiRaw);
-            singles[p] = isFinite(n) ? String(invert(n, conv)) : uiRaw;
+            singles[p] = isFinite(n) ? toRoundedString(invert(n, conv)) : uiRaw;
           });
         setSingleValuesWell((prev) => ({ ...prev, ...singles }));
         if (fileInputWellRef.current) fileInputWellRef.current.value = "";
@@ -969,7 +976,7 @@ export default function DeclineCurvesPage() {
                           const conv = pid ? sysMap[pid] : null;
                           const apply = (v, c) => (c ? v * Number(c.scale_factor ?? 1) + Number(c.offset ?? 0) : v);
                           const n = parseFloat(String((singleValues[p] ?? "")).replace(",","."));
-                          return isFinite(n) ? String(apply(n, conv)) : (singleValues[p] ?? "");
+                          return isFinite(n) ? toRoundedString(apply(n, conv), 6) : (singleValues[p] ?? "");
                         })()}
                         onChange={(e) => {
                           const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
@@ -1011,7 +1018,7 @@ export default function DeclineCurvesPage() {
                           const conv = pid ? sysMap[pid] : null;
                           const apply = (v, c) => (c ? v * Number(c.scale_factor ?? 1) + Number(c.offset ?? 0) : v);
                           const n = parseFloat(String((singleValuesWell[p] ?? "")).replace(",","."));
-                          return isFinite(n) ? String(apply(n, conv)) : (singleValuesWell[p] ?? "");
+                          return isFinite(n) ? toRoundedString(apply(n, conv), 6) : (singleValuesWell[p] ?? "");
                         })()}
                         onChange={(e) => handleWellSingleChange(p, e.target.value)}
                       />
@@ -1053,7 +1060,7 @@ export default function DeclineCurvesPage() {
                         const toNum = (v) => typeof v === "number" ? v : parseFloat(String(v ?? "").replace(",", "."));
                         const apply = (v, c) => (c ? v * Number(c.scale_factor ?? 1) + Number(c.offset ?? 0) : v);
                         const base = toNum(r?.[p] ?? "");
-                        const uiVal = isFinite(base) ? String(apply(base, conv)) : (r?.[p] ?? "");
+                        const uiVal = isFinite(base) ? toRoundedString(apply(base, conv), 6) : (r?.[p] ?? "");
                         return (
                           <td key={p}>
                             <Form.Control
@@ -1085,7 +1092,7 @@ export default function DeclineCurvesPage() {
                       const pid = (wellProperties || []).find(tp => tp.name === p)?.id;
                       const conv = pid ? sysMap[pid] : null;
                       const unit = conv?.unit ? ` (${conv.unit})` : "";
-                      const label = `${p}${unit}`;
+                      const label = p === "GOR" ? `GOR (m³/m³)` : p === "WCT" ? `WCT (%)` : `${p}${unit}`;
                       return <th key={p}>{label}</th>;
                     })}
                 </tr>
@@ -1103,7 +1110,7 @@ export default function DeclineCurvesPage() {
                         const toNum = (v) => typeof v === "number" ? v : parseFloat(String(v ?? "").replace(",", "."));
                         const apply = (v, c) => (c ? v * Number(c.scale_factor ?? 1) + Number(c.offset ?? 0) : v);
                         const base = toNum(r?.[p] ?? "");
-                        const uiVal = isFinite(base) ? String(apply(base, conv)) : (r?.[p] ?? "");
+                        const uiVal = isFinite(base) ? toRoundedString(apply(base, conv), 6) : (r?.[p] ?? "");
                         return (
                           <td key={p}>
                             <Form.Control
