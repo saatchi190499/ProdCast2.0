@@ -465,9 +465,9 @@ export default function DeclineCurvesPage() {
         </div>
 
         {/* Scrollable Table */}
-        <div className="table-wrapper flex-grow-1">
+        <div className="brand-scroll" style={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto" }}>
           <Table bordered size="sm" className="rounded ds-table">
-            <thead>
+            <thead className="ds-thead sticky-top">
               <tr>
                 <th style={{ width: "40px" }}>#</th>
                 {selectedProps
