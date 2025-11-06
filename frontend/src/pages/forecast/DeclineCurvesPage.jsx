@@ -42,6 +42,11 @@ export default function DeclineCurvesPage() {
 
   const TANK = "TANK";
 
+  // Unit systems
+  const [unitSystems, setUnitSystems] = useState([]); // [{id, name}]
+  const [unitMapBySystem, setUnitMapBySystem] = useState({}); // sysId -> { propId -> {unit, scale_factor, offset} }
+  const [selectedUnitSystemId, setSelectedUnitSystemId] = useState(null);
+
   const tankInstances = useMemo(
     () => instanceOptionsByType[TANK] || [],
     [instanceOptionsByType]
@@ -58,7 +63,7 @@ export default function DeclineCurvesPage() {
 
   const SINGLE_VALUE_PROPS = new Set([
     "CurrentGasProd",
-    "FLUIDTEMP",
+    "FluidTemperature",
     "GasInPlace",
     "OilInPlace",
   ]);
@@ -81,12 +86,18 @@ export default function DeclineCurvesPage() {
     return palette[i % palette.length];
   };
   const chartData = useMemo(() => {
+    const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+    const propIdByName = Object.fromEntries((tankProperties || []).map(p => [p.name, p.id]));
+    const convX = sysMap[propIdByName[xKey]];
+    const convY = sysMap[propIdByName[yKey]];
+    const apply = (v, c) => (c ? v * Number(c.scale_factor ?? 1) + Number(c.offset ?? 0) : v);
+    const toNum = (v) => typeof v === "number" ? v : parseFloat(String(v ?? "").replace(",", "."));
     const points = rows
       .map((r) => {
-        const xv = r?.[xKey];
-        const yv = r?.[yKey];
-        const x = typeof xv === "number" ? xv : parseFloat(String(xv ?? "").replace(",", "."));
-        const y = typeof yv === "number" ? yv : parseFloat(String(yv ?? "").replace(",", "."));
+        const xv = toNum(r?.[xKey]);
+        const yv = toNum(r?.[yKey]);
+        const x = apply(xv, convX);
+        const y = apply(yv, convY);
         return isFinite(x) && isFinite(y) ? { x, y } : null;
       })
       .filter(Boolean);
@@ -104,21 +115,29 @@ export default function DeclineCurvesPage() {
         },
       ],
     };
-  }, [rows]);
-  const chartOptions = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: "nearest", intersect: false },
-    plugins: {
-      legend: { position: "top" },
-      title: { display: true, text: `${t("chart") || "Chart"}: ${yKey} vs ${xKey}` },
-      tooltip: { callbacks: { label: (ctx) => `${yKey}: ${ctx.parsed.y}, ${xKey}: ${ctx.parsed.x}` } },
-    },
-    scales: {
-      x: { type: "linear", title: { display: true, text: xKey } },
-      y: { type: "linear", title: { display: true, text: yKey }, beginAtZero: false },
-    },
-  }), [t]);
+  }, [rows, selectedUnitSystemId, unitMapBySystem, tankProperties]);
+  const chartOptions = useMemo(() => {
+    const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+    const propIdByName = Object.fromEntries((tankProperties || []).map(p => [p.name, p.id]));
+    const ux = sysMap[propIdByName[xKey]]?.unit;
+    const uy = sysMap[propIdByName[yKey]]?.unit;
+    const xTitle = ux ? `${xKey} (${ux})` : xKey;
+    const yTitle = uy ? `${yKey} (${uy})` : yKey;
+    return ({
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "nearest", intersect: false },
+      plugins: {
+        legend: { position: "top" },
+        title: { display: true, text: `${t("chart") || "Chart"}: ${yTitle} vs ${xTitle}` },
+        tooltip: { callbacks: { label: (ctx) => `${yKey}: ${ctx.parsed.y}, ${xKey}: ${ctx.parsed.x}` } },
+      },
+      scales: {
+        x: { type: "linear", title: { display: true, text: xTitle } },
+        y: { type: "linear", title: { display: true, text: yTitle }, beginAtZero: false },
+      },
+    });
+  }, [t, selectedUnitSystemId, unitMapBySystem, tankProperties]);
 
   const buildRowsFromInstance = (instanceName, props) => {
     const seriesProps = props.filter((p) => !SINGLE_VALUE_PROPS.has(p));
@@ -193,6 +212,25 @@ export default function DeclineCurvesPage() {
         const availablePropNames = new Set(tankPropsFromRes.map((p) => p.name));
         setSelectedProps(Array.from(availablePropNames));
 
+        // Load unit systems and mappings
+        try {
+          const unitRes = await api.get("/unit-system-property-mapping/");
+          const systems = (unitRes.data || []).map(s => ({ id: s.unit_system_id, name: s.unit_system_name, properties: s.properties }));
+          setUnitSystems(systems.map(s => ({ id: s.id, name: s.name })));
+          const mapBySystem = {};
+          systems.forEach(s => {
+            const m = {};
+            (s.properties || []).forEach(p => {
+              m[p.property_id] = { unit: p.unit, scale_factor: Number(p.scale_factor ?? 1), offset: Number(p.offset ?? 0) };
+            });
+            mapBySystem[s.id] = m;
+          });
+          setUnitMapBySystem(mapBySystem);
+          if (!selectedUnitSystemId && systems.length > 0) setSelectedUnitSystemId(systems[0].id);
+        } catch (e) {
+          console.warn("Unit mapping load failed", e);
+        }
+
         setLoading(false);
       } catch (e) {
         console.error(e);
@@ -210,9 +248,17 @@ export default function DeclineCurvesPage() {
 
   // Row add/remove controls removed per request
 
-  const handleCellChange = (rowIdx, prop, value) => {
+  const handleCellChange = (rowIdx, prop, valueUi) => {
+    const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+    const propId = (tankProperties || []).find(p => p.name === prop)?.id;
+    const conv = propId ? sysMap[propId] : null;
+    const toNum = (v) => parseFloat(String(v ?? "").replace(",", "."));
+    const invert = (v, c) => (c ? (v - Number(c.offset ?? 0)) / Number(c.scale_factor ?? 1) : v);
+    const uiNum = toNum(valueUi);
+    const baseNum = invert(uiNum, conv);
+    const baseStr = isFinite(baseNum) ? String(baseNum) : valueUi;
     const copy = [...rows];
-    copy[rowIdx] = { ...(copy[rowIdx] || {}), [prop]: value };
+    copy[rowIdx] = { ...(copy[rowIdx] || {}), [prop]: baseStr };
     setRows(copy);
   };
 
@@ -271,6 +317,12 @@ export default function DeclineCurvesPage() {
       const seriesProps = selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p));
       const singleProps = selectedProps.filter((p) => SINGLE_VALUE_PROPS.has(p));
 
+      // Convert to the currently selected unit system for export
+      const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+      const propIdByName = Object.fromEntries((tankProperties || []).map(p => [p.name, p.id]));
+      const apply = (v, c) => (c ? v * Number(c.scale_factor ?? 1) + Number(c.offset ?? 0) : v);
+      const toNum = (v) => typeof v === "number" ? v : parseFloat(String(v ?? "").replace(",", "."));
+
       // Build header: Name + series columns (+ single columns at end)
       const header = ["Name", ...seriesProps, ...singleProps];
 
@@ -278,12 +330,18 @@ export default function DeclineCurvesPage() {
       const lines = rows.map((r, idx) => {
         const rowOut = { Name: selectedInstance };
         seriesProps.forEach((p) => {
-          rowOut[p] = String(r?.[p] ?? "").trim();
+          const pid = propIdByName[p];
+          const conv = pid ? sysMap[pid] : null;
+          const base = toNum(r?.[p] ?? "");
+          rowOut[p] = isFinite(base) ? String(apply(base, conv)) : String(r?.[p] ?? "").trim();
         });
         if (idx === 0) {
           // Fill single-value properties only on the first row
           singleProps.forEach((p) => {
-            rowOut[p] = String(singleValues[p] ?? "").trim();
+            const pid = propIdByName[p];
+            const conv = pid ? sysMap[pid] : null;
+            const base = toNum(singleValues[p] ?? "");
+            rowOut[p] = isFinite(base) ? String(apply(base, conv)) : String(singleValues[p] ?? "").trim();
           });
         } else {
           // Leave single-value properties empty on subsequent rows
@@ -322,8 +380,28 @@ export default function DeclineCurvesPage() {
       const seriesProps = selectedProps.filter((p) => !SINGLE_VALUE_PROPS.has(p));
       const singleProps = selectedProps.filter((p) => SINGLE_VALUE_PROPS.has(p));
 
+      // Determine Oilfield unit system id (fallback to currently selected if not found)
+      const pickOilfield = () => {
+        const needle = ["oilfield", "oil field", "oil-field"];
+        const found = (unitSystems || []).find(u => needle.some(n => String(u.name || "").toLowerCase().includes(n)));
+        return found?.id ?? selectedUnitSystemId ?? null;
+      };
+      const oilfieldSystemId = pickOilfield();
+      const oilMap = oilfieldSystemId ? (unitMapBySystem[oilfieldSystemId] || {}) : {};
+      const propIdByName = Object.fromEntries((tankProperties || []).map(p => [p.name, p.id]));
+      const apply = (v, c) => (c ? v * Number(c.scale_factor ?? 1) + Number(c.offset ?? 0) : v);
+      const toNum = (v) => typeof v === "number" ? v : parseFloat(String(v ?? "").replace(",", "."));
+
       const seriesPayload = seriesProps.map((propName) => {
-        const colVals = rows.map((r) => (r?.[propName] ?? "").toString().trim());
+        const pid = propIdByName[propName];
+        const convOil = pid ? oilMap[pid] : null;
+        const colVals = rows.map((r) => {
+          const baseRaw = (r?.[propName] ?? "").toString().trim();
+          const n = toNum(baseRaw);
+          if (!isFinite(n)) return baseRaw; // keep as-is if not numeric
+          const out = apply(n, convOil);
+          return String(out);
+        });
         const csv = colVals.join("|");
         const existing = existingMap[selectedInstance]?.[propName];
         const propId = tankProperties.find((p) => p.name === propName)?.id;
@@ -338,7 +416,11 @@ export default function DeclineCurvesPage() {
       });
 
       const singlePayload = singleProps.map((propName) => {
-        const val = (singleValues[propName] ?? "").toString().trim();
+        const pid = propIdByName[propName];
+        const convOil = pid ? oilMap[pid] : null;
+        const baseRaw = (singleValues[propName] ?? "").toString().trim();
+        const n = toNum(baseRaw);
+        const val = isFinite(n) ? String(apply(n, convOil)) : baseRaw;
         const existing = existingMap[selectedInstance]?.[propName];
         const propId = tankProperties.find((p) => p.name === propName)?.id;
         const rec = {
@@ -439,6 +521,23 @@ export default function DeclineCurvesPage() {
             </Form.Group>
           </div>
 
+          {/* Unit system */}
+          <div className="d-flex align-items-end mb-3" style={{ gap: "8px" }}>
+            <Form.Group style={{ minWidth: 200 }}>
+              <Form.Label>{t("unitSystem") || "Unit System"}</Form.Label>
+              <Form.Select
+                size="sm"
+                className="ds-input"
+                value={selectedUnitSystemId || ""}
+                onChange={(e) => setSelectedUnitSystemId(e.target.value ? Number(e.target.value) : null)}
+              >
+                {unitSystems.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </div>
+
           {/* Single-value properties just below */}
           {selectedProps.some((p) => SINGLE_VALUE_PROPS.has(p)) && (
             <div className="single-values mb-3">
@@ -448,14 +547,35 @@ export default function DeclineCurvesPage() {
                   .filter((p) => SINGLE_VALUE_PROPS.has(p))
                   .map((p) => (
                     <Form.Group key={p} style={{ minWidth: 140 }}>
-                      <Form.Label className="small">{p}</Form.Label>
+                      <Form.Label className="small">
+                        {(() => {
+                          const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+                          const pid = (tankProperties || []).find(tp => tp.name === p)?.id;
+                          const unit = pid ? sysMap[pid]?.unit : null;
+                          return unit ? `${p} (${unit})` : p;
+                        })()}
+                      </Form.Label>
                       <Form.Control
                         size="sm"
                         className="ds-input"
-                        value={singleValues[p] ?? ""}
-                        onChange={(e) =>
-                          setSingleValues((prev) => ({ ...prev, [p]: e.target.value }))
-                        }
+                        value={(function(){
+                          const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+                          const pid = (tankProperties || []).find(tp => tp.name === p)?.id;
+                          const conv = pid ? sysMap[pid] : null;
+                          const apply = (v, c) => (c ? v * Number(c.scale_factor ?? 1) + Number(c.offset ?? 0) : v);
+                          const n = parseFloat(String((singleValues[p] ?? "")).replace(",","."));
+                          return isFinite(n) ? String(apply(n, conv)) : (singleValues[p] ?? "");
+                        })()}
+                        onChange={(e) => {
+                          const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+                          const pid = (tankProperties || []).find(tp => tp.name === p)?.id;
+                          const conv = pid ? sysMap[pid] : null;
+                          const toNum = (v) => parseFloat(String(v ?? "").replace(",", "."));
+                          const invert = (v, c) => (c ? (v - Number(c.offset ?? 0)) / Number(c.scale_factor ?? 1) : v);
+                          const uiNum = toNum(e.target.value);
+                          const baseNum = invert(uiNum, conv);
+                          setSingleValues((prev) => ({ ...prev, [p]: isFinite(baseNum) ? String(baseNum) : e.target.value }));
+                        }}
                       />
                     </Form.Group>
                   ))}
@@ -472,10 +592,14 @@ export default function DeclineCurvesPage() {
                 <th style={{ width: "40px" }}>#</th>
                 {selectedProps
                   .filter((p) => !SINGLE_VALUE_PROPS.has(p))
-                  .map((p) => (
-                    <th key={p}>{p}</th>
-                  ))}
-              </tr>
+                  .map((p) => {
+                    const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+                    const pid = (tankProperties || []).find(tp => tp.name === p)?.id;
+                    const conv = pid ? sysMap[pid] : null;
+                    const unit = conv?.unit ? ` (${conv.unit})` : "";
+                    return <th key={p}>{p}{unit}</th>;
+                  })}
+            </tr>
             </thead>
             <tbody>
               {rows.map((r, idx) => (
@@ -483,16 +607,25 @@ export default function DeclineCurvesPage() {
                   <td>{idx + 1}</td>
                   {selectedProps
                     .filter((p) => !SINGLE_VALUE_PROPS.has(p))
-                    .map((p) => (
-                      <td key={p}>
-                        <Form.Control
-                          size="sm"
-                          className="ds-input"
-                          value={r?.[p] ?? ""}
-                          onChange={(e) => handleCellChange(idx, p, e.target.value)}
-                        />
-                      </td>
-                    ))}
+                    .map((p) => {
+                      const sysMap = selectedUnitSystemId ? (unitMapBySystem[selectedUnitSystemId] || {}) : {};
+                      const pid = (tankProperties || []).find(tp => tp.name === p)?.id;
+                      const conv = pid ? sysMap[pid] : null;
+                      const toNum = (v) => typeof v === "number" ? v : parseFloat(String(v ?? "").replace(",", "."));
+                      const apply = (v, c) => (c ? v * Number(c.scale_factor ?? 1) + Number(c.offset ?? 0) : v);
+                      const base = toNum(r?.[p] ?? "");
+                      const uiVal = isFinite(base) ? String(apply(base, conv)) : (r?.[p] ?? "");
+                      return (
+                        <td key={p}>
+                          <Form.Control
+                            size="sm"
+                            className="ds-input"
+                            value={uiVal}
+                            onChange={(e) => handleCellChange(idx, p, e.target.value)}
+                          />
+                        </td>
+                      );
+                    })}
                 </tr>
               ))}
             </tbody>

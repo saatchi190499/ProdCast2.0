@@ -97,6 +97,7 @@
     "forecast": "Forecast",
     "visualAnalysis": "Visual Analysis",
     "exportCSV": "Export CSV",
-    "importCSV": "Import CSV"
+    "importCSV": "Import CSV",
+    "unitSystem": "Unit System"
 
 }
