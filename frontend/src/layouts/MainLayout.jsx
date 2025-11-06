@@ -22,7 +22,8 @@ import {
   FiClock,
   FiActivity,
   FiLayers,
-  FiPackage
+  FiPackage,
+  FiTrendingDown
 } from "react-icons/fi";
 import { LuWorkflow } from "react-icons/lu";
 import api from "../utils/axiosInstance";
@@ -233,13 +234,27 @@ export default function MainLayout() {
               path.startsWith("/forecast") ||
               path.startsWith("/scenarios") ||
               path.startsWith("/components/events") ||
-              path.startsWith("/components/pi") ||
               path.startsWith("/components/decline-curves");
-            let icon = <FiBarChart2 />;
+
+            // Determine active sub item under Forecast, then mirror its icon when collapsed
+            let icon = <FiBarChart2 />; // default group icon
             if (isCollapsedUnpinned && isAnyActive) {
-              if (path.includes("/models")) icon = <FiPackage />;
-              else if (path.includes("/events") || path.startsWith("/components/events")) icon = <FiActivity />;
-              else if (path.startsWith("/scenarios")) icon = <FiLayers />;
+              // 1) Explicit non-DS sub (Scenarios)
+              if (path.startsWith("/scenarios")) {
+                icon = <FiLayers />;
+              } else {
+                // 2) DS sub by /forecast/<DataSource Name>
+                const dsActive = groupSources.find(ds =>
+                  path.startsWith(`/forecast/${encodeURIComponent(ds.data_source_name).toLowerCase()}`)
+                );
+                const dsName = dsActive?.data_source_name;
+                if (dsName === "Models") icon = <FiPackage />;
+                else if (dsName === "Events") icon = <FiActivity />;
+                else if (dsName === "Decline Curves") icon = <FiTrendingDown />;
+                // 3) Fallback for component deep routes
+                else if (path.startsWith("/components/events")) icon = <FiActivity />;
+                else if (path.startsWith("/components/decline-curves")) icon = <FiTrendingDown />;
+              }
             }
             return (
               <div key={type}>
@@ -279,10 +294,14 @@ export default function MainLayout() {
                             }
                             onClick={() => handleLoadComponents(ds)}
                           >
-                            {ds.data_source_name === "Models" ? (
+                            {ds.data_source_name === "Models" && (
                               <FiPackage style={{ marginRight: 6 }} />
-                            ) : (
+                            )}
+                            {ds.data_source_name === "Events" && (
                               <FiActivity style={{ marginRight: 6 }} />
+                            )}
+                            {ds.data_source_name === "Decline Curves" && (
+                              <FiTrendingDown style={{ marginRight: 6 }} />
                             )}
                             {ds.data_source_name}
                           </NavLink>
