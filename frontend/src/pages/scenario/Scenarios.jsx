@@ -131,6 +131,7 @@ export default function ScenariosPage() {
   const [saving, setSaving] = useState(false);
   const [sortKey, setSortKey] = useState("scenario_name");
   const [sortAsc, setSortAsc] = useState(true);
+  const [showOfficial, setShowOfficial] = useState(false);
   // Search and filter
   const [searchText, setSearchText] = useState("");
   const [showOnlyUser, setShowOnlyUser] = useState(false);
@@ -219,6 +220,15 @@ export default function ScenariosPage() {
     }
     setSaving(false);
   };
+
+  // Fake official models list (preview-only)
+  const OFFICIAL_MODELS = [
+    { id: "official-1", name: "ARPS Oil Base", description: "Official baseline model" },
+    { id: "official-2", name: "ARPS Gas Tight", description: "Official tight gas model" },
+    { id: "official-3", name: "ARPS Shale", description: "Shale decline template" },
+    { id: "official-4", name: "ARPS Waterflood", description: "Waterflood type curve" },
+    { id: "official-5", name: "ARPS Pilot", description: "Pilot standard" },
+  ];
 
   const handleDeleteScenario = async (s) => {
     if (!window.confirm(t("deleteConfirm") || "Delete this scenario?")) return;
@@ -349,9 +359,21 @@ export default function ScenariosPage() {
 
             {availableComponents.map(ds => (
               <Form.Group key={ds.data_source_id} className="mb-3">
-                <Form.Label className="ds-title">
-                  <strong>{ds.data_source_name}</strong>
-                </Form.Label>
+                <div className="d-flex align-items-center justify-content-between">
+                  <Form.Label className="ds-title mb-1">
+                    <strong>{ds.data_source_name}</strong>
+                  </Form.Label>
+                  {ds.data_source_name === "Models" && (
+                    <Form.Check
+                      type="switch"
+                      id="official-switch"
+                      label={t("officialOnly") || "Official"}
+                      checked={showOfficial}
+                      onChange={() => setShowOfficial(v => !v)}
+                      className="brand-switch"
+                    />
+                  )}
+                </div>
                 <Form.Select
                   value={selectedComponents[ds.data_source_id] || ""}
                   onChange={e => handleComponentSelect(ds.data_source_id, Number(e.target.value))}
@@ -359,12 +381,23 @@ export default function ScenariosPage() {
                   className="ds-input form-select"
                 >
                   <option value="">{t("selectComponent")}</option>
-                  {ds.components.map(comp => (
-                    <option key={comp.id} value={comp.id}>
-                      {comp.name} ({comp.description})
-                    </option>
-                  ))}
+                  {showOfficial && ds.data_source_name === "Models"
+                    ? OFFICIAL_MODELS.map(comp => (
+                        <option key={comp.id} value="" disabled>
+                          {comp.name} ({comp.description})
+                        </option>
+                      ))
+                    : ds.components.map(comp => (
+                        <option key={comp.id} value={comp.id}>
+                          {comp.name} ({comp.description})
+                        </option>
+                      ))}
                 </Form.Select>
+                {showOfficial && ds.data_source_name === "Models" && (
+                  <div className="text-muted" style={{ fontSize: 12, marginTop: 6 }}>
+                    {t("officialPreviewNote") || "Official models are preview-only here."}
+                  </div>
+                )}
               </Form.Group>
             ))}
           </Form>

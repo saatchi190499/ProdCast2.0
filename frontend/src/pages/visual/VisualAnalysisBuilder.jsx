@@ -92,8 +92,12 @@ export default function VisualAnalysisBuilder() {
       try {
         const scRes = await api.get(`/scenarios/all/`);
         const all = scRes.data || [];
-        // Hide scenarios with ERROR status from the selector
-        const filtered = all.filter(s => String(s.status).toUpperCase() !== "ERROR");
+        // Hide scenarios with ERROR or NEW status from the selector
+        const filtered = all.filter(s => {
+          const status = String(s.status || "").toUpperCase();
+          return !["ERROR", "NEW"].includes(status);
+        });
+
         setScenarios(filtered);
       } catch (e) {
         console.warn("Failed to load scenarios", e);
@@ -137,7 +141,7 @@ export default function VisualAnalysisBuilder() {
     try {
       const raw = localStorage.getItem("va_defaultInstanceByType");
       if (raw) setDefaultInstanceByType(JSON.parse(raw));
-    } catch {}
+    } catch { }
   }, []);
 
   const getDefaultInstance = (typeName) => {
@@ -208,7 +212,7 @@ export default function VisualAnalysisBuilder() {
         try {
           const compRes = await api.get(`/components/${id}/`);
           setComponentName(compRes.data?.name ?? "Component");
-        } catch {}
+        } catch { }
 
         const metaRes = await api.get("/object-metadata/");
         const t = metaRes.data.types;
@@ -284,7 +288,7 @@ export default function VisualAnalysisBuilder() {
       fetchData().finally(() => setAutoFetched(true));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [loading, configLoaded]);
+  }, [loading, configLoaded]);
 
   // Load existing VisualAnalysisConfig and apply to UI
   useEffect(() => {
@@ -705,77 +709,54 @@ export default function VisualAnalysisBuilder() {
               )}
 
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${grid.cols}, 1fr)`, gap: 12 }}>
-                  {Array.from({ length: grid.rows * grid.cols }).map((_, idx) => {
-                    const panel = panels[idx] || { type: "", property: "", instances: [] };
-                    const series = buildSeriesForPanel(panel);
-                    const entries = Object.entries(series.seriesMap);
-                    const data = {
-                      datasets: entries.map(([label, pts], di) => {
-                        let finalLabel = label;
-                        if (series.mode === 'property') {
-                          finalLabel = withAliasAndUnit(panel.type, label);
-                        }
-                        return {
-                          label: finalLabel,
-                          data: pts,
-                          borderColor: COLORS[di % COLORS.length],
-                          backgroundColor: `${COLORS[di % COLORS.length]}33`,
-                          borderWidth: 2,
-                          tension: 0.2,
-                          fill: false,
-                          pointRadius: 2,
-                        };
-                      })
-                    };
-                    const panelTitle = (() => {
-                      const propLabel = (panel.properties && panel.properties.length > 0)
-                        ? panel.properties.map(n => withAliasAndUnit(panel.type, n)).join(', ')
-                        : withAliasAndUnit(panel.type, panel.property || 'Property');
-                      const base = `${propLabel} — ${isScenarioCompare ? 'Scenario Comparison' : componentName}`;
-                      const instLabel = isScenarioCompare
-                        ? (panel.instances && panel.instances[0])
-                        : ((panel.instances || []).length > 0 ? panel.instances.join(', ') : '');
-                      return instLabel ? `${base} — ${instLabel}` : base;
-                    })();
-                    const panelOptions = {
-                      ...chartOptions,
-                      plugins: { ...chartOptions.plugins, title: { display: true, text: panelTitle } }
-                    };
-                    return (
-                      <Card key={idx} style={{ minHeight: 280, position: 'relative' }}>
-                        <Card.Body>
-                          {dataLoading ? (
-                            <div className="d-flex align-items-center" style={{ gap: 12 }}>
-                              <Spinner animation="border" size="sm" />
-                              <span>Fetching data…</span>
-                            </div>
-                          ) : (!panel.type || !panel.property || (panel.instances || []).length === 0) ? (
-                            <div style={{ height: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 12, flexDirection: 'column' }}>
-                              <div>No selection. Click to assign type, property and instances.</div>
-                              <Button variant="outline-primary" onClick={() => {
-                                setActivePanelIndex(idx);
-                                const p = panels[idx] || {};
-                                const initialType = p.type || selectedType || (types[0]?.name || "");
-                                setModalType(initialType);
-                                const props = propertiesMap[initialType] || [];
-                                const initProp = p.property || (props[0]?.name || "");
-                                setModalProperty(initProp);
-                                setModalProperties(p.properties && p.properties.length > 0 ? p.properties : (initProp ? [initProp] : []));
-                                setModalInstances(p.instances || []);
-                                setShowPanelModal(true);
-                              }}>
-                                Assign to panel {idx + 1}
-                              </Button>
-                            </div>
-                          ) : entries.length === 0 ? (
-                            <Alert variant="info">No data for selected objects.</Alert>
-                          ) : (
-                            <div style={{ height: 280 }}>
-                              <Line data={data} options={panelOptions} height={280} />
-                            </div>
-                          )}
-                          <div style={{ position: 'absolute', top: 8, right: 8 }}>
-                            <Button size="sm" variant="outline-secondary" onClick={() => {
+                {Array.from({ length: grid.rows * grid.cols }).map((_, idx) => {
+                  const panel = panels[idx] || { type: "", property: "", instances: [] };
+                  const series = buildSeriesForPanel(panel);
+                  const entries = Object.entries(series.seriesMap);
+                  const data = {
+                    datasets: entries.map(([label, pts], di) => {
+                      let finalLabel = label;
+                      if (series.mode === 'property') {
+                        finalLabel = withAliasAndUnit(panel.type, label);
+                      }
+                      return {
+                        label: finalLabel,
+                        data: pts,
+                        borderColor: COLORS[di % COLORS.length],
+                        backgroundColor: `${COLORS[di % COLORS.length]}33`,
+                        borderWidth: 2,
+                        tension: 0.2,
+                        fill: false,
+                        pointRadius: 2,
+                      };
+                    })
+                  };
+                  const panelTitle = (() => {
+                    const propLabel = (panel.properties && panel.properties.length > 0)
+                      ? panel.properties.map(n => withAliasAndUnit(panel.type, n)).join(', ')
+                      : withAliasAndUnit(panel.type, panel.property || 'Property');
+                    const base = `${propLabel} — ${isScenarioCompare ? 'Scenario Comparison' : componentName}`;
+                    const instLabel = isScenarioCompare
+                      ? (panel.instances && panel.instances[0])
+                      : ((panel.instances || []).length > 0 ? panel.instances.join(', ') : '');
+                    return instLabel ? `${base} — ${instLabel}` : base;
+                  })();
+                  const panelOptions = {
+                    ...chartOptions,
+                    plugins: { ...chartOptions.plugins, title: { display: true, text: panelTitle } }
+                  };
+                  return (
+                    <Card key={idx} style={{ minHeight: 280, position: 'relative' }}>
+                      <Card.Body>
+                        {dataLoading ? (
+                          <div className="d-flex align-items-center" style={{ gap: 12 }}>
+                            <Spinner animation="border" size="sm" />
+                            <span>Fetching data…</span>
+                          </div>
+                        ) : (!panel.type || !panel.property || (panel.instances || []).length === 0) ? (
+                          <div style={{ height: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 12, flexDirection: 'column' }}>
+                            <div>No selection. Click to assign type, property and instances.</div>
+                            <Button variant="outline-primary" onClick={() => {
                               setActivePanelIndex(idx);
                               const p = panels[idx] || {};
                               const initialType = p.type || selectedType || (types[0]?.name || "");
@@ -784,20 +765,43 @@ export default function VisualAnalysisBuilder() {
                               const initProp = p.property || (props[0]?.name || "");
                               setModalProperty(initProp);
                               setModalProperties(p.properties && p.properties.length > 0 ? p.properties : (initProp ? [initProp] : []));
-                              if (isScenarioCompare) {
-                                const def = p.instances?.[0] || getDefaultInstance(initialType);
-                                setModalInstances(def ? [def] : []);
-                              } else {
-                                setModalInstances(p.instances || []);
-                              }
-                              
+                              setModalInstances(p.instances || []);
                               setShowPanelModal(true);
-                            }}>Edit</Button>
+                            }}>
+                              Assign to panel {idx + 1}
+                            </Button>
                           </div>
-                        </Card.Body>
-                      </Card>
-                    );
-                  })}
+                        ) : entries.length === 0 ? (
+                          <Alert variant="info">No data for selected objects.</Alert>
+                        ) : (
+                          <div style={{ height: 280 }}>
+                            <Line data={data} options={panelOptions} height={280} />
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                          <Button size="sm" variant="outline-secondary" onClick={() => {
+                            setActivePanelIndex(idx);
+                            const p = panels[idx] || {};
+                            const initialType = p.type || selectedType || (types[0]?.name || "");
+                            setModalType(initialType);
+                            const props = propertiesMap[initialType] || [];
+                            const initProp = p.property || (props[0]?.name || "");
+                            setModalProperty(initProp);
+                            setModalProperties(p.properties && p.properties.length > 0 ? p.properties : (initProp ? [initProp] : []));
+                            if (isScenarioCompare) {
+                              const def = p.instances?.[0] || getDefaultInstance(initialType);
+                              setModalInstances(def ? [def] : []);
+                            } else {
+                              setModalInstances(p.instances || []);
+                            }
+
+                            setShowPanelModal(true);
+                          }}>Edit</Button>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  );
+                })}
               </div>
             </Card.Body>
           </Card>
@@ -900,7 +904,7 @@ export default function VisualAnalysisBuilder() {
                 ))
               )}
             </div>
-            
+
           </div>
         </Modal.Body>
         <Modal.Footer>
@@ -910,7 +914,7 @@ export default function VisualAnalysisBuilder() {
             onClick={() => {
               if (activePanelIndex != null) {
                 setPanels(prev => prev.map((p, i) => i === activePanelIndex ? { ...p, type: modalType, property: modalProperty, properties: modalProperties, instances: modalInstances } : p));
-                
+
               }
               setShowPanelModal(false);
             }}
