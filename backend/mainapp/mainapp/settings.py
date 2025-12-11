@@ -1,8 +1,9 @@
 import os
-from pathlib import Path
 from datetime import timedelta
-import logging
+from pathlib import Path
+
 import environ
+import socket
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
@@ -12,11 +13,29 @@ environ.Env.read_env(BASE_DIR / ".env.development", overwrite=True)
 # --- Security / Debug ---
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-secret-key")
 DEBUG = env("DJANGO_DEBUG", default=True)
-ALLOWED_HOSTS = [h.strip() for h in env("DJANGO_ALLOWED_HOSTS", default="*").split(",") if h.strip()]
+
+
+def _detect_host_ip() -> str:
+    """Return the primary outbound IP of the host, fallback to localhost."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+
+
+HOST_IP = env("DJANGO_HOST_IP", default=_detect_host_ip())
+_raw_allowed = env("DJANGO_ALLOWED_HOSTS", default=HOST_IP)
+ALLOWED_HOSTS = [h.strip() for h in _raw_allowed.split(",") if h.strip()]
+if DEBUG and not _raw_allowed.strip():
+    ALLOWED_HOSTS = ["*"]
 
 # --- CORS ---
-_raw_cors = env("CORS_ALLOWED_ORIGINS", default="").strip()
+_raw_cors = env("CORS_ALLOWED_ORIGINS", default=f"http://{HOST_IP}").strip()
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _raw_cors.split(",") if o.strip()]
+if DEBUG and not _raw_cors:
+    CORS_ALLOW_ALL_ORIGINS = True
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -64,28 +83,28 @@ TEMPLATES = [
 WSGI_APPLICATION = "mainapp.wsgi.application"
 
 # --- Database ---
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": env("POSTGRES_DB", default="prodcast2"),
-#         "USER": env("POSTGRES_USER", default="postgres"),
-#         "PASSWORD": env("POSTGRES_PASSWORD", default="1"),
-#         "HOST": env("POSTGRES_HOST", default="db"),
-#         "PORT": env("POSTGRES_PORT", default="5432"),
-#     }
-# }
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'mssql',
-        'NAME': 'DOFGI1',
-        'HOST': 'KPCDBS14\\CYRGEN',
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'trusted_connection': 'yes',
-        },
-    },
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("POSTGRES_DB", default="prodcast2"),
+        "USER": env("POSTGRES_USER", default="postgres"),
+        "PASSWORD": env("POSTGRES_PASSWORD", default="1"),
+        "HOST": env("POSTGRES_HOST", default="db"),
+        "PORT": env("POSTGRES_PORT", default="5432"),
+    }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'mssql',
+#         'NAME': 'DOFGI1',
+#         'HOST': 'KPCDBS14\\CYRGEN',
+#         'OPTIONS': {
+#             'driver': 'ODBC Driver 17 for SQL Server',
+#             'trusted_connection': 'yes',
+#         },
+#     },
+# }
 
 
 
@@ -143,29 +162,25 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_DEFAULT_QUEUE = "default"
+CELERY_TASK_ROUTES = {
+    "worker.run_scenario": {"queue": "scenarios"},
+    "worker.run_workflow": {"queue": "workflows"},
+    "mainserver.run_workflow_schedules": {"queue": "default"},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# LDAP debug logs (optional)
-logger = logging.getLogger("django_auth_ldap")
-logger.addHandler(logging.StreamHandler())
-logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
-
-FILE_UPLOAD_TEMP_DIR = env("FILE_UPLOAD_TEMP_DIR", default=r"D:\Azat\ProdCast2.0\Temp\django_uploads")
-
-# Маленькие файлы держим в памяти, чтобы лишний раз не писать на диск
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024  # подстройте под свой трафик
-
 # Логи — с ротацией и на D:
-DJANGO_LOG_DIR = env("DJANGO_LOG_DIR", default=r"D:\Azat\ProdCast2.0\backend\logs")
+DJANGO_LOG_DIR = Path(env("DJANGO_LOG_DIR", default=str(BASE_DIR / "logs")))
+DJANGO_LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
         "rotating_file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": os.path.join(DJANGO_LOG_DIR, "django.log"),
+            "filename": str(DJANGO_LOG_DIR / "django.log"),
             "maxBytes": 5 * 1024 * 1024,
             "backupCount": 5,
             "encoding": "utf-8",
