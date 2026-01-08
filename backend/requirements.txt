@@ -33,4 +33,7 @@ redis
 whitenoise
 django-environ
 django-smart-selects
-pywin32
+requests
+nbformat
+croniter
+pywin32; platform_system=="Windows"

@@ -1,8 +1,35 @@
 import time
-from typing import Optional, Literal
-import pythoncom
-from win32com.client import Dispatch
+from typing import Optional, Literal, Any, Callable
+import platform
+
+_IS_WINDOWS = platform.system() == "Windows"
+
+pythoncom: Any = None
+Dispatch: Optional[Callable[..., Any]] = None
+
+if _IS_WINDOWS:
+    try:
+        import pythoncom as _pythoncom  # type: ignore[import-not-found]
+        from win32com.client import Dispatch as _Dispatch  # type: ignore[import-not-found]
+
+        pythoncom = _pythoncom
+        Dispatch = _Dispatch
+    except Exception:
+        pythoncom = None
+        Dispatch = None
+
 from .exceptions import PetexException
+
+
+def petex_available() -> bool:
+    return _IS_WINDOWS and pythoncom is not None and Dispatch is not None
+
+
+def _require_petex() -> None:
+    if not _IS_WINDOWS:
+        raise PetexException("Petex integration is Windows-only (pywin32/COM).")
+    if pythoncom is None or Dispatch is None:
+        raise PetexException("Petex integration unavailable: pywin32 (pythoncom/win32com) not installed.")
 
 AppName = Literal["PROSPER", "MBAL", "GAP", "PVT", "RESOLVE", "REVEAL"]
 
@@ -36,8 +63,9 @@ class PetexServer:
 
     # Context manager support
     def __enter__(self) -> "PetexServer":
+        _require_petex()
         pythoncom.CoInitialize()
-        self._server = Dispatch(self._progid)
+        self._server = Dispatch(self._progid)  # type: ignore[misc]
         if self._server is None:
             raise PetexException("Unable to acquire COM server (license or connectivity issue)")
         return self

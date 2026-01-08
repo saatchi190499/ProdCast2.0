@@ -1,71 +1,41 @@
-# Docker Compose implementaion for [Saatchi's project](https://github.com/saatchi190499/ProdCast2.0.git)
-* Backend: Django + Gunicorn
-* Frontend: React 
-* Database: PostgreSQL
+# Docker Compose implementation for ProdCast 2.0
+- Backend: Django (+ Gunicorn in image)
+- Frontend: React (Vite)
+- Database: PostgreSQL
+- Cache/Broker: Redis
 
 ## Documentation
 - Model Data Architecture: see `docs/model-data-architecture.md` for entities, relationships, storage tables, constraints, and an ER diagram.
 
 ## Installation & Setup
-### 1.Clone the repository
-   ```
-   git clone <your-repo-url>
-   cd <project-folder>
-   ```
-
-### 2.Configure environment
-  Edit the following files before running:
-   <strike>
-   ```
-   backend/settings.py
-   ```
-
-  * ALLOWED_HOSTS → include your domain or server IP
-  * CORS_ALLOWED_ORIGINS → add your frontend domain
-</strike>
-     
-   ```
-   docker-compose.yml
-   ``` 
-    
-  * Ensure database credentials in environment section match Django settings.
-  * set CORS_ALLOWED_ORIGINS
-  * set DJANGO_SUPERUSER_USERNAME and DJANGO_SUPERUSER_PASSWORD
-    
-      
-     
-    
-  > [!NOTE]
->  I am currently working on making those steps easier through env variables
-### 3.Build & start containers
-   ```
-   docker compose up -d --build
-   ```
-This will start:
-  * PostgreSQL on port 5432
-  * Backend on port 8000 
-  * Frontend on port 80
-    
-<strike>### 4.Run migrations & create superuser
-
-Open a shell into the backend container: 
-   ```
-docker compose exec backend python manage.py migrate
-docker compose exec backend python manage.py createsuperuser
+### 1. Clone the repository
 ```
-</strike>
- 
- > [!NOTE]
-><strike>This part will get automated to</strike>
- 
-> [!NOTE]
-> Done
+git clone <your-repo-url>
+cd <project-folder>
+```
 
+### 2. Configure environment
+Edit these env files (used by `docker-compose.yml`):
+- `backend/mainapp/.env.development` (Django + Postgres + Redis)
+- `frontend/.env.development` (Vite)
 
-### 5. Access the app
- * Frontend: http://localhost/
- * Backend: http://localhost:8000/admin/
+If you want to expose the app on a LAN IP, set `DJANGO_ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS`.
 
-  > [!TIP]
->  To change API base URL used by frontend, update `frontend/src/links.jsx`
+### Windows-only integrations
+- The Petex (OpenServer/COM) integration requires Windows + `pywin32` and will not run inside Linux containers. The backend still starts, but Petex endpoints will error if called.
 
+### 3. Build & start containers
+```
+docker compose up -d --build
+```
+
+This will start:
+- PostgreSQL on port 5432
+- Backend on port 8000
+- Frontend on port 80
+
+### 4. Access the app
+- Frontend: http://localhost/
+- Backend: http://localhost:8000/admin/
+
+Tip: API base URL is defined in `frontend/src/links.jsx`.
