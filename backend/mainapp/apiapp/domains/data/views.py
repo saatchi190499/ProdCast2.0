@@ -10,8 +10,8 @@ from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from pi_client import series as pi_series
-from pi_client import value as pi_value
+from apiapp.domains.integration.pi_client import series as pi_series
+from apiapp.domains.integration.pi_client import value as pi_value
 
 from apiapp.domains.data.models import DataSource, DataSourceComponent, MainClass
 from apiapp.domains.data.serializers import (

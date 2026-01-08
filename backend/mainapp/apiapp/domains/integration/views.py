@@ -5,18 +5,16 @@ import os
 import types
 from contextlib import redirect_stderr, redirect_stdout
 
-import petex_client.gap as gap
-import petex_client.gap_tools as gap_tools
-import petex_client.resolve as resolve
-import pi_client
+from apiapp.domains.integration import pi_client
+from apiapp.domains.integration.petex_client import gap, gap_tools, resolve
+from apiapp.domains.integration.petex_client.server import PetexServer
 from django.http import HttpResponse, HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
-from petex_client.server import PetexServer
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 API_KEY = "supersecret"
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+BASE_DIR = os.path.dirname(__file__)
 MODULE_PATHS = {
     "petex_client": os.path.join(BASE_DIR, "petex_client"),
     "pi_client": os.path.join(BASE_DIR, "pi_client"),

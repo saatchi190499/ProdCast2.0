@@ -3,8 +3,8 @@ import tempfile
 
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from petex_client import gap
-from petex_client.server import PetexServer
+from apiapp.domains.integration.petex_client import gap
+from apiapp.domains.integration.petex_client.server import PetexServer
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -134,7 +134,7 @@ class UpdateInstancesView(APIView):
                 gap_path = tmp.name
 
             try:
-                from petex_client import gap_tools
+                from apiapp.domains.integration.petex_client import gap_tools
 
                 with PetexServer() as srv:
                     gap.start(srv)
