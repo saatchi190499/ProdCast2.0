@@ -157,6 +157,7 @@ export default function MainLayout() {
 
   const componentRouteFor = (dsName, compId) => {
     if (dsName === "Events") return `/components/events/${compId}`;
+    if (dsName === "Internal") return `/components/internal/${compId}`;
     if (dsName === "Workflows") return `/components/workflows/${compId}`;
     if (dsName === "PI System") return `/components/pi/${compId}`;
     if (dsName === "VisualAnalysis") return `/components/visual-analysis/${compId}`;

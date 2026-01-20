@@ -12,6 +12,7 @@ class Command(BaseCommand):
             ("Events", "FORECAST"),
             ("Decline Curves", "FORECAST"),
             ("PI System", "SOURCE"),
+            ("Internal", "SOURCE"),
             ("Workflows", "WORKFLOW"),
             ("VisualAnalysis", "VISUAL"),
         ]

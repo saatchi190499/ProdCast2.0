@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import api from "../../utils/axiosInstance";
+import api from "../../../utils/axiosInstance";
 import { Card, Table, Button, Form, Spinner, Alert, Modal } from "react-bootstrap";
 import { useTranslation } from "react-i18next";
-import "../DataSourcePage.css";
+import "../../DataSourcePage.css";
 
 import { Line } from "react-chartjs-2";
 import {

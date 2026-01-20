@@ -5,7 +5,8 @@ import Settings from "../pages/Settings";
 import EventRecordsPage from "../pages/events/EventRecordsPage";
 import EventComparePage from "../pages/events/EventComparePage";
 import NotebookEditor from "../pages/notebook/NotebookEditor";
-import PiRecordsPage from "../pages/pi/PiRecordsPage";
+import PiRecordsPage from "../pages/external_source/pi/PiRecordsPage";
+import InternalRecordsPage from "../pages/internal_source/InternalRecordsPage";
 import { PetexTipsProvider } from "../pages/notebook/context/PetexTipsContext";
 import VisualAnalysisBuilder from "../pages/visual/VisualAnalysisBuilder";
 import DeclineCurvesPage from "../pages/forecast/DeclineCurvesPage";
@@ -40,6 +41,7 @@ export default function AppRouter() {
           <Route index element={<Dashboard />} />
           <Route path=":sourceType/:sourceName" element={<DataSourcePage />} />
           <Route path="components/events/:id" element={<EventRecordsPage />} />
+          <Route path="components/internal/:id" element={<InternalRecordsPage />} />
           <Route path="components/events/compare" element={<EventComparePage />} />
           <Route path="components/visual-analysis/:id" element={<VisualAnalysisBuilder />} />
           <Route path="components/decline-curves/:id" element={<DeclineCurvesPage />} />

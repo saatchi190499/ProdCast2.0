@@ -122,6 +122,11 @@ export default function DataSourcePage() {
         return;
       }
 
+      if (sourceName === "Internal") {
+        navigate(`/components/internal/${res.data.id}`);
+        return;
+      }
+
       if (sourceName === "Workflows") {
         navigate(`/components/workflows/${res.data.id}`);
         return;
@@ -373,6 +378,13 @@ export default function DataSourcePage() {
                       if (sourceName === "Events") {
                         if (user?.username === c.created_by || role === "admin") {
                           navigate(`/components/events/${c.id}`);
+                        } else {
+                          alert(t("editOnlyAuthor"));
+                        }
+                      }
+                      if (sourceName === "Internal") {
+                        if (user?.username === c.created_by || role === "admin") {
+                          navigate(`/components/internal/${c.id}`);
                         } else {
                           alert(t("editOnlyAuthor"));
                         }

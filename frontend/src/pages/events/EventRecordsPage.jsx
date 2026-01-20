@@ -9,7 +9,7 @@ import useWellBranches from "./useWellBranches";
 import "../DataSourcePage.css";
 
 
-export default function EventRecordsPage() {
+export default function EventRecordsPage({ apiPathPrefix = "events", headingLabel } = {}) {
   const { wellBranches, loadingBranches, errorBranches } = useWellBranches();
   const { id } = useParams();
   const { t } = useTranslation();
@@ -133,7 +133,7 @@ export default function EventRecordsPage() {
         setInstanceOptions(instances);
         setPropertyOptions(properties);
 
-        const recordsRes = await api.get(`/components/events/${id}`);
+        const recordsRes = await api.get(`/components/${apiPathPrefix}/${id}`);
 
         const converted = convertIdsToNames(recordsRes.data, types, instances, properties);
         setRecords(converted);
@@ -415,7 +415,7 @@ export default function EventRecordsPage() {
 
     try {
       const dataToSave = convertNamesToIds(records);
-      await api.post(`/components/events/${id}`, dataToSave);
+      await api.post(`/components/${apiPathPrefix}/${id}`, dataToSave);
       alert(t("savedSuccessfully"));
     } catch (err) {
       console.error("Save error:", err);
@@ -431,7 +431,7 @@ export default function EventRecordsPage() {
   return (
     <Card className="ds-card p-4">
       <div className="d-flex justify-content-between mb-3">
-        <h4 className="ds-heading">📋 {t("eventSet")} — {componentName}</h4>
+        <h4 className="ds-heading">📋 {(headingLabel ?? t("eventSet"))} — {componentName}</h4>
         <Button variant="none" className="btn-brand" onClick={() => navigate(-1)}>← {t("back")}
         </Button>
       </div>

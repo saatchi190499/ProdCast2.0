@@ -123,6 +123,62 @@ class EventRecordsView(APIView):
         return Response(results, status=status.HTTP_200_OK)
 
 
+class InternalRecordsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, component_id):
+        component = get_object_or_404(DataSourceComponent, id=component_id)
+        if component.data_source.data_source_name != "Internal":
+            return Response({"error": "Component is not an Internal source"}, status=status.HTTP_400_BAD_REQUEST)
+        records = MainClass.objects.filter(component=component).order_by("date_time")
+        serializer = MainClassSerializer(records, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, component_id):
+        component = get_object_or_404(DataSourceComponent, id=component_id)
+        if component.data_source.data_source_name != "Internal":
+            return Response({"error": "Component is not an Internal source"}, status=status.HTTP_400_BAD_REQUEST)
+
+        records = request.data
+        if not isinstance(records, list):
+            return Response({"error": "Expected a list of records"}, status=400)
+
+        existing_records = {r.data_set_id: r for r in MainClass.objects.filter(component=component)}
+
+        sent_ids = set()
+        results = []
+
+        for r in records:
+            rec_id = r.get("data_set_id")
+            if rec_id and rec_id in existing_records:
+                obj = existing_records[rec_id]
+                serializer = MainClassSerializer(obj, data=r, partial=True, context={"component": component})
+                if serializer.is_valid():
+                    serializer.save()
+                    sent_ids.add(rec_id)
+                    results.append({"id": rec_id, "status": "updated"})
+                else:
+                    results.append({"id": rec_id, "status": "error", "errors": serializer.errors})
+            else:
+                serializer = MainClassSerializer(data=r, context={"component": component})
+                if serializer.is_valid():
+                    obj = serializer.save()
+                    sent_ids.add(obj.data_set_id)
+                    results.append({"id": obj.data_set_id, "status": "created"})
+                else:
+                    results.append({"status": "error", "errors": serializer.errors})
+
+        for rec_id, obj in existing_records.items():
+            if rec_id not in sent_ids:
+                obj.delete()
+                results.append({"id": rec_id, "status": "deleted"})
+
+        component.last_updated = now()
+        component.save(update_fields=["last_updated"])
+
+        return Response(results, status=status.HTTP_200_OK)
+
+
 class PIRecordsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -325,6 +381,7 @@ __all__ = [
     "DataSourceComponentCreateView",
     "DataSourceComponentDetailView",
     "EventRecordsView",
+    "InternalRecordsView",
     "PIRecordsView",
     "DeclineCurvesView",
     "fetch_pi_value_for_component_row",
