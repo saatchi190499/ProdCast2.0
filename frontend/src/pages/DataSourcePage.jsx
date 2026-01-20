@@ -30,7 +30,8 @@ export default function DataSourcePage() {
   const [newComponent, setNewComponent] = useState({
     name: "",
     description: "",
-    file: null
+    file: null,
+    internal_mode: "SERIES",
   });
 
   const [sortKey, setSortKey] = useState(null);
@@ -108,6 +109,10 @@ export default function DataSourcePage() {
     formData.append("description", newComponent.description);
     formData.append("data_source", sourceName);
 
+    if (sourceName === "Internal") {
+      formData.append("internal_mode", newComponent.internal_mode || "SERIES");
+    }
+
     if (sourceName === "Models" && newComponent.file) {
       formData.append("file", newComponent.file);
     }
@@ -115,7 +120,7 @@ export default function DataSourcePage() {
     try {
       const res = await api.post("/components/", formData);
       setShowModal(false);
-      setNewComponent({ name: "", description: "", file: null });
+      setNewComponent({ name: "", description: "", file: null, internal_mode: "SERIES" });
 
       if (sourceName === "Events") {
         navigate(`/components/events/${res.data.id}`);
@@ -221,6 +226,29 @@ export default function DataSourcePage() {
                     }
                   />
                 </Form.Group>
+                {sourceName === "Internal" && (
+                  <Form.Group className="mb-3">
+                    <Form.Label>Mode</Form.Label>
+                    <div className="d-flex gap-3">
+                      <Form.Check
+                        type="radio"
+                        id="internal-mode-series"
+                        name="internalMode"
+                        label="Series"
+                        checked={newComponent.internal_mode === "SERIES"}
+                        onChange={() => setNewComponent({ ...newComponent, internal_mode: "SERIES" })}
+                      />
+                      <Form.Check
+                        type="radio"
+                        id="internal-mode-constants"
+                        name="internalMode"
+                        label="Constants"
+                        checked={newComponent.internal_mode === "CONSTANTS"}
+                        onChange={() => setNewComponent({ ...newComponent, internal_mode: "CONSTANTS" })}
+                      />
+                    </div>
+                  </Form.Group>
+                )}
                 {sourceName === "Models" && (
                   <Form.Group className="mb-3">
                     <Form.Label>{t("componentFile")}</Form.Label>
@@ -355,6 +383,15 @@ export default function DataSourcePage() {
                     {sortKey === "last_updated" &&
                       (sortAsc ? " ▲" : " ▼")}
                   </th>
+                  {sourceName === "Internal" && (
+                    <th
+                      onClick={() => handleSort("internal_mode")}
+                      className={`sortable ${sortKey === "internal_mode" ? "sorted" : ""}`}
+                    >
+                      Mode
+                      {sortKey === "internal_mode" && (sortAsc ? " ▲" : " ▼")}
+                    </th>
+                  )}
                   <th>{t("file")}</th>
                   <th
                     onClick={() => handleSort("description")}
@@ -423,6 +460,15 @@ export default function DataSourcePage() {
                     <td>{formatDate(c.created_date) || "—"}</td>
                     <td>{c.created_by || "—"}</td>
                     <td>{formatDate(c.last_updated) || "—"}</td>
+                    {sourceName === "Internal" && (
+                      <td>
+                        {c.internal_mode === "CONSTANTS"
+                          ? "Constants"
+                          : c.internal_mode === "SERIES"
+                            ? "Series"
+                            : (c.internal_mode || "")}
+                      </td>
+                    )}
                     <td>
                       {c.file ? (
                         <a

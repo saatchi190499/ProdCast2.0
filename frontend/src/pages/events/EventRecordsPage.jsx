@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../utils/axiosInstance";
-import { Card, Table, Button, Form, Spinner, Alert } from "react-bootstrap";
+import { Card, Table, Button, Form, Spinner, Alert, Modal } from "react-bootstrap";
 import { saveAs } from "file-saver";
 import Papa from "papaparse";
 import { useTranslation } from "react-i18next";
@@ -9,8 +9,8 @@ import useWellBranches from "./useWellBranches";
 import "../DataSourcePage.css";
 
 
-export default function EventRecordsPage({ apiPathPrefix = "events", headingLabel } = {}) {
-  const { wellBranches, loadingBranches, errorBranches } = useWellBranches();
+export default function EventRecordsPage({ apiPathPrefix = "events", headingLabel, readOnly = false, showTag = false } = {}) {
+  const { wellBranches, loadingBranches } = useWellBranches();
   const { id } = useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -32,9 +32,14 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
 
   const [selectedUnitSystemId, setSelectedUnitSystemId] = useState(null);
   const [unitSystemMappings, setUnitSystemMappings] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [historyRow, setHistoryRow] = useState(null);
+  const [historyData, setHistoryData] = useState([]);
   const emptyRow = {
     date_time: "", object_type: "", object_instance: "", object_type_property: "",
-    value: "", sub_data_source: "", description: ""
+    value: "", tag: "", sub_data_source: "", description: ""
   };
 
   const getCategoryForProperty = (objectTypeName, propertyName) => {
@@ -393,7 +398,9 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
           const d = new Date(hasTime ? dtOut : `${dtOut}T00:00:00`);
           if (!isNaN(d.getTime())) dtOut = d.toISOString();
         }
-      } catch {}
+      } catch (e) {
+        dtOut = r.date_time;
+      }
 
       return {
         ...r,
@@ -408,6 +415,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
   };
 
   const handleSave = async () => {
+    if (readOnly) return;
     if (!validateRecords()) {
       alert(t("fillRequired")); // или замените на тост
       return;
@@ -423,52 +431,76 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
     }
   };
 
+  const handleShowHistory = async (row) => {
+    if (!row?.data_set_id) return;
+    setHistoryRow(row);
+    setShowHistory(true);
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const res = await api.get(`/components/${id}/row/${row.data_set_id}/history/`);
+      setHistoryData(res.data || []);
+    } catch (e) {
+      setHistoryError(e?.response?.data?.error || e.message);
+      setHistoryData([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
 
 
   if (loading) return <Spinner animation="border" />;
   if (error) return <Alert variant="danger">{error}</Alert>;
 
   return (
+    <>
     <Card className="ds-card p-4">
       <div className="d-flex justify-content-between mb-3">
         <h4 className="ds-heading">📋 {(headingLabel ?? t("eventSet"))} — {componentName}</h4>
         <Button variant="none" className="btn-brand" onClick={() => navigate(-1)}>← {t("back")}
         </Button>
       </div>
-      <div className="d-flex flex-wrap gap-2 mb-3">
-        <Button variant="none" className="btn-brand" onClick={addEmptyRow}>{t("addRow")}</Button>
-        <Button variant="none" className="btn-brand" onClick={removeEmptyRows}>{t("removeEmpty")}</Button>
-        <Button variant="none" className="btn-brand" onClick={handleSave}>💾 {t("save")}</Button>
+      <div className="d-flex flex-wrap gap-2 mb-3 align-items-center">
+        {!readOnly && (
+          <>
+            <Button variant="none" className="btn-brand" onClick={addEmptyRow}>{t("addRow")}</Button>
+            <Button variant="none" className="btn-brand" onClick={removeEmptyRows}>{t("removeEmpty")}</Button>
+            <Button variant="none" className="btn-brand" onClick={handleSave}>💾 {t("save")}</Button>
 
-        <Form.Group>
-          <div className="d-flex align-items-center gap-2">
-            <Form.Control
-              type="file"
-              id="csvFile"
-              accept=".csv"
-              onChange={handleImportFile}
-              style={{ display: "none" }}
-            />
-            <Button variant="none" className="btn-brand" onClick={() => document.getElementById("csvFile").click()}>
-              📎 {t("chooseFile")}
+            <Form.Group>
+              <div className="d-flex align-items-center gap-2">
+                <Form.Control
+                  type="file"
+                  id="csvFile"
+                  accept=".csv"
+                  onChange={handleImportFile}
+                  style={{ display: "none" }}
+                />
+                <Button variant="none" className="btn-brand" onClick={() => document.getElementById("csvFile").click()}>
+                  📎 {t("chooseFile")}
+                </Button>
+              </div>
+            </Form.Group>
+            <Button variant="none" className="btn-brand" onClick={handleExportCSV}>
+              {t("csvExport")}
             </Button>
-          </div>
-        </Form.Group>
-        <Button variant="none" className="btn-brand" onClick={handleExportCSV}>
-          {t("csvExport")}
-        </Button>
-        <Form.Control className="ds-input" type="text" placeholder={t("search")} value={searchText} onChange={(e) => setSearchText(e.target.value)} style={{ maxWidth: 200 }} />
-        <Form.Select className="ds-input" value={bulkEdit.field} onChange={(e) => setBulkEdit({ ...bulkEdit, field: e.target.value })} style={{ maxWidth: 150 }}>
-          <option value="">{t("field")}</option>
-          <option value="object_type">{t("type")}</option>
-          <option value="object_instance">{t("instance")}</option>
-          <option value="object_type_property">{t("property")}</option>
-          <option value="value">{t("value")}</option>
-          <option value="sub_data_source">{t("category")}</option>
-          <option value="description">{t("description")}</option>
-        </Form.Select>
-        <Form.Control className="ds-input" type="text" placeholder={t("value")} value={bulkEdit.value} onChange={(e) => setBulkEdit({ ...bulkEdit, value: e.target.value })} style={{ maxWidth: 150 }} />
-        <Button variant="none" className="btn-brand" onClick={handleBulkEdit}>{t("apply")}</Button>
+
+            <Form.Select className="ds-input" value={bulkEdit.field} onChange={(e) => setBulkEdit({ ...bulkEdit, field: e.target.value })} style={{ maxWidth: 150 }}>
+              <option value="">{t("field")}</option>
+              <option value="object_type">{t("type")}</option>
+              <option value="object_instance">{t("instance")}</option>
+              <option value="object_type_property">{t("property")}</option>
+              <option value="value">{t("value")}</option>
+              <option value="sub_data_source">{t("category")}</option>
+              <option value="description">{t("description")}</option>
+            </Form.Select>
+            <Form.Control className="ds-input" type="text" placeholder={t("value")} value={bulkEdit.value} onChange={(e) => setBulkEdit({ ...bulkEdit, value: e.target.value })} style={{ maxWidth: 150 }} />
+            <Button variant="none" className="btn-brand" onClick={handleBulkEdit}>{t("apply")}</Button>
+          </>
+        )}
+
+        <Form.Control className="ds-input" type="text" placeholder={t("search")} value={searchText} onChange={(e) => setSearchText(e.target.value)} style={{ maxWidth: 220 }} />
 
         <Form.Select
           className="ds-input"
@@ -483,7 +515,6 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
             </option>
           ))}
         </Form.Select>
-
       </div>
       <div className="brand-scroll" style={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto" }}>
         <Table bordered size="sm" className="rounded ds-table">
@@ -494,6 +525,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
                 { key: "object_type", label: t("type") },
                 { key: "object_instance", label: t("instance") },
                 { key: "object_type_property", label: t("property") },
+                ...(showTag ? [{ key: "tag", label: "Tag" }] : []),
                 { key: "value", label: t("value") },
                 { key: "sub_data_source", label: t("category") },
                 { key: "description", label: t("description") },
@@ -515,7 +547,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
             {filteredRecords.map((r, i) => {
               const realIndex = records.findIndex(x => x === r);
               const error = errorsMap[realIndex] || {};
-              const dateOnly = r.date_time.split('T')[0];
+              const dateOnly = (r.date_time || "").split('T')[0];
               return (
                 <tr key={i}>
                   <td className={error.date_time ? 'cell-error' : ''}>
@@ -523,6 +555,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
                       className="ds-input"
                       type="date"
                       value={dateOnly}
+                      disabled={readOnly}
                       onChange={(e) => handleChange(i, "date_time", e.target.value)}
                     />
                   </td>
@@ -530,6 +563,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
                     <Form.Select
                       className="ds-input"
                       value={r.object_type || ""}
+                      disabled={readOnly}
                       onChange={(e) => handleChange(i, "object_type", e.target.value)}>
                       <option value="">Select Type</option>
                       {typeOptions.map((t) => (
@@ -541,6 +575,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
                     <Form.Select
                       className="ds-input"
                       value={r.object_instance || ""}
+                      disabled={readOnly}
                       onChange={(e) => handleChange(i, "object_instance", e.target.value)}>
                       <option value="">Select Instance</option>
                       {(instanceOptions[r.object_type] || []).map((inst) => (
@@ -552,6 +587,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
                     <Form.Select
                       className="ds-input"
                       value={r.object_type_property || ""}
+                      disabled={readOnly}
                       onChange={(e) => handleChange(i, "object_type_property", e.target.value)}>
                       <option value="">Select Property</option>
                       {(propertyOptions[r.object_type] || [])
@@ -561,13 +597,24 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
                       ))}
                     </Form.Select>
                   </td>
+                  {showTag && (
+                    <td>
+                      <Form.Control
+                        className="ds-input"
+                        type="text"
+                        value={r.tag || ""}
+                        disabled={readOnly}
+                        onChange={(e) => handleChange(i, "tag", e.target.value)}
+                      />
+                    </td>
+                  )}
                   <td className={error.object_type_property ? 'cell-error' : ''}>
                     {r.object_type_property === "Route" ? (
                       <Form.Select
                         className="ds-input"
                         value={r.value || ""}
                         onChange={e => handleChange(i, "value", e.target.value)}
-                        disabled={loadingBranches}
+                        disabled={readOnly || loadingBranches}
                       >
                         <option value="">Select Branch</option>
                         {(wellBranches[r.object_instance] || []).map((branchName, idx) => (
@@ -579,6 +626,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
                         <Form.Control
                           className="ds-input"
                           type="number"
+                          disabled={readOnly}
                           value={(() => {
                             const v = r.value;
                             if (v === "" || v === null) return "";
@@ -628,11 +676,24 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
                     <Form.Control
                       type="text"
                       value={r.description || ""}
+                      disabled={readOnly}
                       onChange={(e) => handleChange(i, "description", e.target.value)}
                     />
                   </td>
                   <td className="text-center">
-                    <Button variant="none" className="btn-danger-outline" size="sm" onClick={() => handleDeleteRow(i)}>🗑</Button>
+                    <Button
+                      variant="none"
+                      className="btn-brand me-1"
+                      size="sm"
+                      disabled={!r.data_set_id}
+                      onClick={() => handleShowHistory(r)}
+                      title={t("history") || "History"}
+                    >
+                      H
+                    </Button>
+                    {!readOnly && (
+                      <Button variant="none" className="btn-danger-outline" size="sm" onClick={() => handleDeleteRow(i)}>×</Button>
+                    )}
                   </td>
                 </tr>
               );
@@ -642,5 +703,41 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
         </Table>
       </div>
     </Card>
+    <Modal show={showHistory} onHide={() => setShowHistory(false)} size="lg" centered>
+      <Modal.Header closeButton>
+        <Modal.Title>
+          {t("history") || "History"} #{historyRow?.data_set_id ?? ""}
+        </Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {historyLoading ? (
+          <Spinner animation="border" />
+        ) : historyError ? (
+          <Alert variant="danger">{String(historyError)}</Alert>
+        ) : historyData.length > 0 ? (
+          <div className="table-responsive">
+            <Table bordered hover size="sm" className="ds-table">
+              <thead>
+                <tr>
+                  <th>{t("time") || "Time"}</th>
+                  <th>{t("value") || "Value"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historyData.map((h) => (
+                  <tr key={h.id}>
+                    <td>{h.time ? new Date(h.time).toLocaleString() : ""}</td>
+                    <td>{h.value ?? ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        ) : (
+          <Alert variant="info">{t("noData") || "No history yet."}</Alert>
+        )}
+      </Modal.Body>
+    </Modal>
+    </>
   );
 }

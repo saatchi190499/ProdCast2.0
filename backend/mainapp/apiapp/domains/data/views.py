@@ -13,10 +13,11 @@ from rest_framework.views import APIView
 from apiapp.domains.integration.pi_client import series as pi_series
 from apiapp.domains.integration.pi_client import value as pi_value
 
-from apiapp.domains.data.models import DataSource, DataSourceComponent, MainClass
+from apiapp.domains.data.models import DataSource, DataSourceComponent, MainClass, MainClassHistory
 from apiapp.domains.data.serializers import (
     DataSourceComponentSerializer,
     DataSourceSerializer,
+    MainClassHistorySerializer,
     MainClassSerializer,
 )
 
@@ -323,6 +324,17 @@ class DeclineCurvesView(APIView):
         return Response(results, status=status.HTTP_200_OK)
 
 
+class MainClassHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, component_id, row_id):
+        component = get_object_or_404(DataSourceComponent, id=component_id)
+        row = get_object_or_404(MainClass, pk=row_id, component=component)
+        history = MainClassHistory.objects.filter(main_record=row).order_by("-time")
+        serializer = MainClassHistorySerializer(history, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @api_view(["POST"])
 def fetch_pi_value_for_component_row(request, component_id, row_id):
     try:
@@ -384,6 +396,7 @@ __all__ = [
     "InternalRecordsView",
     "PIRecordsView",
     "DeclineCurvesView",
+    "MainClassHistoryView",
     "fetch_pi_value_for_component_row",
     "pi_history_for_component_row",
 ]

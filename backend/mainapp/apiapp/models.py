@@ -14,7 +14,7 @@ from apiapp.domains.catalog.models import (  # noqa: F401
     ObjectTypeProperty,
     GapNetworkData,
 )
-from apiapp.domains.data.models import DataSource, DataSourceComponent, MainClass  # noqa: F401
+from apiapp.domains.data.models import DataSource, DataSourceComponent, MainClass, MainClassHistory  # noqa: F401
 from apiapp.domains.scenario.models import ScenarioClass, ScenarioLog, ScenarioComponentLink  # noqa: F401
 from apiapp.domains.workflow.models import (  # noqa: F401
     Workflow,
@@ -37,6 +37,7 @@ __all__ = [
     "DataSource",
     "DataSourceComponent",
     "MainClass",
+    "MainClassHistory",
     "ScenarioClass",
     "ScenarioLog",
     "ScenarioComponentLink",

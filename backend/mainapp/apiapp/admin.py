@@ -6,7 +6,7 @@ from django.utils.safestring import mark_safe
 from .models import (
     UnitSystem, UnitType, UnitDefinition, UnitCategory, UnitSystemCategoryDefinition,
     DataSource, DataSourceComponent, ScenarioClass, ScenarioComponentLink,
-    ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, ScenarioLog, Workflow, 
+    ObjectType, ObjectInstance, ObjectTypeProperty, MainClass, MainClassHistory, ScenarioLog, Workflow, 
     WorkflowScheduler, WorkflowSchedulerLog, GapNetworkData
 )
 
@@ -80,14 +80,14 @@ class DataSourceAdmin(admin.ModelAdmin):
 # ---------- Data Source Component ----------
 @admin.register(DataSourceComponent)
 class DataSourceComponentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'data_source', 'created_date', 'last_updated', 'created_by')
+    list_display = ('name', 'data_source', 'internal_mode', 'created_date', 'last_updated', 'created_by')
     list_filter = ('data_source', 'created_by')
     search_fields = ('name', 'description')
     readonly_fields = ('created_date', 'last_updated', 'created_by')
 
     fieldsets = (
         (None, {
-            'fields': ('name', 'description', 'data_source', 'file')
+            'fields': ('name', 'description', 'data_source', 'internal_mode', 'file')
         }),
         ('Audit Information', {
             'fields': ('created_by', 'created_date', 'last_updated'),
@@ -214,6 +214,20 @@ class MainClassAdmin(admin.ModelAdmin):
             'fields': ('description', 'tag')
         }),
     )
+
+
+@admin.register(MainClassHistory)
+class MainClassHistoryAdmin(admin.ModelAdmin):
+    list_display = ("id", "main_record", "time", "value")
+    list_filter = ("time",)
+    search_fields = (
+        "id",
+        "main_record__data_set_id",
+        "main_record__component__name",
+        "main_record__component__data_source__data_source_name",
+        "value",
+    )
+    readonly_fields = ("time",)
 
 @admin.register(Workflow)
 class WorkflowAdmin(admin.ModelAdmin):

@@ -2,7 +2,7 @@ from django.utils.timezone import now
 from rest_framework import serializers
 
 from apiapp.domains.catalog.models import ObjectInstance, ObjectType, ObjectTypeProperty
-from apiapp.domains.data.models import DataSource, DataSourceComponent, MainClass
+from apiapp.domains.data.models import DataSource, DataSourceComponent, MainClass, MainClassHistory
 
 
 class DataSourceSerializer(serializers.ModelSerializer):
@@ -18,7 +18,7 @@ class DataSourceComponentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DataSourceComponent
-        fields = ["id", "name", "description", "data_source", "created_by", "created_date", "last_updated", "file"]
+        fields = ["id", "name", "description", "data_source", "internal_mode", "created_by", "created_date", "last_updated", "file"]
         read_only_fields = ["created_by", "created_date", "last_updated"]
 
 
@@ -84,9 +84,18 @@ class MainClassSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
+class MainClassHistorySerializer(serializers.ModelSerializer):
+    data_set_id = serializers.IntegerField(source="main_record_id", read_only=True)
+    time = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = MainClassHistory
+        fields = ["id", "data_set_id", "time", "value"]
+
 
 __all__ = [
     "DataSourceSerializer",
     "DataSourceComponentSerializer",
     "MainClassSerializer",
+    "MainClassHistorySerializer",
 ]

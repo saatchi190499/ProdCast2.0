@@ -1,5 +1,6 @@
 from django.db import models
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save, pre_save
+from django.utils.timezone import now
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
 from smart_selects.db_fields import ChainedForeignKey
@@ -37,6 +38,12 @@ class DataSourceComponent(models.Model):
     name = models.CharField("Name", max_length=100, unique=True)
     description = models.TextField("Description", blank=True)
     data_source = models.ForeignKey(DataSource, on_delete=models.PROTECT, verbose_name="Data Source")
+    internal_mode = models.CharField(
+        "Internal Mode",
+        max_length=20,
+        choices=[("SERIES", "Series"), ("CONSTANTS", "Constants")],
+        default="SERIES",
+    )
 
     created_by = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
@@ -121,10 +128,48 @@ class MainClass(models.Model):
         }
 
 
+class MainClassHistory(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    main_record = models.ForeignKey(
+        MainClass,
+        on_delete=models.CASCADE,
+        related_name="history",
+        db_index=True,
+    )
+    time = models.DateTimeField("Time", db_index=True)
+    value = models.TextField(db_column="value", null=True, blank=True)
+
+    class Meta:
+        db_table = "apiapp_mainclass_history"
+        verbose_name = "Main Data Record History"
+        verbose_name_plural = "Main Data Record History"
+        app_label = "apiapp"
+        ordering = ["-time"]
+        indexes = [
+            models.Index(fields=["main_record", "time"]),
+        ]
+
+    def __str__(self):
+        return f"History({self.main_record_id}) @ {self.time}"
+
+
 @receiver(pre_save, sender=MainClass)
 def validate_object_instance(sender, instance, **kwargs):
     if instance.object_instance.object_type != instance.object_type:
         raise ValidationError("Object instance must belong to the selected object type.")
 
 
-__all__ = ["DataSource", "DataSourceComponent", "MainClass"]
+@receiver(post_save, sender=MainClass)
+def create_history_snapshot(sender, instance, created, **kwargs):
+    history_time = instance.date_time or now()
+    last = (
+        MainClassHistory.objects.filter(main_record=instance)
+        .order_by("-time", "-id")
+        .first()
+    )
+    if last and last.time == history_time and last.value == instance.value:
+        return
+    MainClassHistory.objects.create(main_record=instance, time=history_time, value=instance.value)
+
+
+__all__ = ["DataSource", "DataSourceComponent", "MainClass", "MainClassHistory"]
