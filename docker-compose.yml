@@ -1,12 +1,12 @@
 services:
-  db:
-    image: postgres:17
-    env_file:
-      - ./backend/mainapp/.env.development
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+  # db:
+  #   image: postgres:17
+  #   env_file:
+  #     - ./backend/mainapp/.env.development
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
 
 
   redis:
@@ -27,7 +27,6 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
       - redis
 
   frontend:
@@ -47,5 +46,4 @@ services:
       - backend
 
 volumes:
-  postgres_data:
   redis_data:

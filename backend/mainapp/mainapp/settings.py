@@ -89,7 +89,7 @@ DATABASES = {
         "NAME": env("POSTGRES_DB", default="prodcast2"),
         "USER": env("POSTGRES_USER", default="postgres"),
         "PASSWORD": env("POSTGRES_PASSWORD", default="1"),
-        "HOST": env("POSTGRES_HOST", default="db"),
+        "HOST": env("POSTGRES_HOST", default="postgresql"),
         "PORT": env("POSTGRES_PORT", default="5432"),
     }
 }
