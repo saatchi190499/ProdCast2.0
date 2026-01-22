@@ -19,6 +19,18 @@ export default function WorkflowSchedulerPage() {
   const [activeScheduler, setActiveScheduler] = useState(null);
   const [activeRun, setActiveRun] = useState(null);
 
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState(null);
+
+  const minuteIntervals = [1, 2, 5, 10, 15, 30, 60];
+
+  const applyMinuteInterval = (minutes, target, setTarget) => {
+    const val = Number(minutes);
+    if (!val || val <= 0) return;
+    const expr = val === 1 ? "* * * * *" : `*/${val} * * * *`;
+    setTarget({ ...target, cron_expression: expr });
+  };
+
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -98,13 +110,36 @@ export default function WorkflowSchedulerPage() {
     }
   };
 
+  const openEdit = (scheduler) => {
+    setEditForm({
+      id: scheduler.id,
+      cron_expression: scheduler.cron_expression || "0 0 * * *",
+    });
+    setShowEdit(true);
+  };
+
+  const closeEdit = () => {
+    setShowEdit(false);
+    setEditForm(null);
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    if (!editForm) return;
+    await api.patch(`workflow-schedulers/${editForm.id}/`, {
+      cron_expression: editForm.cron_expression,
+    });
+    closeEdit();
+    fetchSchedulers();
+  };
+
   useEffect(() => {
     fetchSchedulers();
     fetchWorkflows();
   }, []);
 
   return (
-    <div className="container mt-4">
+    <div className="container-fluid mt-4">
       <div className="ds-card p-4">
         <h2 className="ds-heading mb-4">Workflow Scheduler</h2>
 
@@ -133,6 +168,18 @@ export default function WorkflowSchedulerPage() {
               leadingZero
             />
           </div>
+          <div className="col-md-2">
+            <select
+              className="ds-input form-select"
+              value=""
+              onChange={(e) => applyMinuteInterval(e.target.value, form, setForm)}
+            >
+              <option value="">Minute interval</option>
+              {minuteIntervals.map((m) => (
+                <option key={m} value={m}>{`Every ${m} min`}</option>
+              ))}
+            </select>
+          </div>
           <div className="col-md-3">
             <button type="submit" className="btn btn-brand w-100">
               ➕ Add Schedule
@@ -157,8 +204,8 @@ export default function WorkflowSchedulerPage() {
               <tr key={s.id} className="ds-row">
                 <td>{s.workflow_name}</td>
                 <td>{s.cron_expression}</td>
-                <td>{s.next_run || "-"}</td>
-                <td>{s.last_run || "-"}</td>
+                <td>{s.next_run ? new Date(s.next_run).toLocaleString() : "-"}</td>
+                <td>{s.last_run ? new Date(s.last_run).toLocaleString() : "-"}</td>
                 <td>
                   <div className="form-check form-switch brand-switch">
                     <input
@@ -177,6 +224,14 @@ export default function WorkflowSchedulerPage() {
                     >
                       <FiFileText size={16} />
                       Logs
+                    </button>
+
+                    <button
+                      className="btn btn-brand-outline btn-sm d-flex align-items-center gap-1"
+                      onClick={() => openEdit(s)}
+                    >
+                      <FiClock size={16} />
+                      Edit
                     </button>
 
                     <button
@@ -222,7 +277,7 @@ export default function WorkflowSchedulerPage() {
                 </div>
                 <div className="modal-body">
                   <div className="row">
-                    {/* Left column — список запусков */}
+                    {/* Left column ??" ??D?D,??D_D? D?D?D?????D?D_D? */}
                     <div className="col-4 border-end brand-scroll" style={{ maxHeight: "400px", overflowY: "auto" }}>
                       <ul className="list-group">
                         {runs.map((run) => (
@@ -252,7 +307,7 @@ export default function WorkflowSchedulerPage() {
                       </ul>
                     </div>
 
-                    {/* Right column — детали запуска */}
+                    {/* Right column ??" D'D??,D?D?D, D?D?D?????D?D? */}
                     <div className="col-8">
                       {activeRun ? (
                         <>
@@ -261,23 +316,23 @@ export default function WorkflowSchedulerPage() {
                           {activeRun.finished_at && (
                             <p><b>Finished:</b> {new Date(activeRun.finished_at).toLocaleString()}</p>
                           )}
-                          <p><b>Task ID:</b> {activeRun.task_id || "—"}</p>
+                          <p><b>Task ID:</b> {activeRun.task_id || "-"}</p>
 
-                          {/* Кнопки управления задачей */}
+                          {/* DsD?D_D?D?D, ??D???D?D?D?D?D?D,?? D?D?D'D???D?D1 */}
                           {activeRun.task_id && (
                             <div className="d-flex gap-2 mb-3">
                               <button
                                 className="btn btn-danger-outline btn-sm d-flex align-items-center gap-1"
                                 onClick={async () => {
-                                  if (window.confirm("Удалить задачу из очереди?")) {
+                                  if (window.confirm("D?D'D?D?D,?,?O D?D?D'D????? D,D? D_??D???D?D'D,?")) {
                                     try {
                                       await api.delete(
                                         `workflows/task/${activeRun.task_id}/?queue=workflows`
                                       );
-                                      alert("Задача удалена");
-                                      fetchRuns(activeScheduler.workflow); // обновляем список
+                                      alert("D-D?D'D???D? ??D'D?D?D?D?D?");
+                                      fetchRuns(activeScheduler.workflow); // D_D?D?D_D?D???D?D? ??D?D,??D_D?
                                     } catch (err) {
-                                      alert("Ошибка при удалении задачи");
+                                      alert("Dz?^D,D?D?D? D???D, ??D'D?D?D?D?D,D, D?D?D'D???D,");
                                       console.error(err);
                                     }
                                   }
@@ -289,15 +344,15 @@ export default function WorkflowSchedulerPage() {
                               <button
                                 className="btn btn-brand-outline btn-sm d-flex align-items-center gap-1"
                                 onClick={async () => {
-                                  if (window.confirm("Прервать выполнение задачи?")) {
+                                  if (window.confirm("DY??D???D?D??,?O D??<D?D_D?D?D?D?D,D? D?D?D'D???D,?")) {
                                     try {
                                       await api.delete(
                                         `workflows/task/${activeRun.task_id}/?queue=workflows&revoke=1`
                                       );
-                                      alert("Задача прервана");
+                                      alert("D-D?D'D???D? D???D???D?D?D?D?");
                                       fetchRuns(activeScheduler.workflow);
                                     } catch (err) {
-                                      alert("Ошибка при остановке задачи");
+                                      alert("Dz?^D,D?D?D? D???D, D_???,D?D?D_D?D?D? D?D?D'D???D,");
                                       console.error(err);
                                     }
                                   }
@@ -328,6 +383,59 @@ export default function WorkflowSchedulerPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Edit Modal */}
+      {showEdit && editForm && (
+        <>
+          <div
+            className="modal-backdrop fade show"
+            style={{ backdropFilter: "blur(4px)" }}
+          ></div>
+
+          <div className="modal d-block" tabIndex="-1" role="dialog">
+            <div className="modal-dialog" role="document" style={{ overflow: "visible" }}>
+              <div className="modal-content" style={{ overflow: "visible" }}>
+                <div className="modal-header">
+                  <h5 className="modal-title">Edit Cron</h5>
+                  <button type="button" className="btn-close" onClick={closeEdit}></button>
+                </div>
+                <form onSubmit={saveEdit}>
+                  <div className="modal-body">
+                    <label className="form-label">Cron Expression</label>
+                    <Cron
+                      value={editForm.cron_expression}
+                      setValue={(val) => setEditForm({ ...editForm, cron_expression: val })}
+                      clearButton={false}
+                      leadingZero
+                    />
+                    <div className="mt-3">
+                      <label className="form-label">Minute Interval</label>
+                      <select
+                        className="ds-input form-select"
+                        value=""
+                        onChange={(e) => applyMinuteInterval(e.target.value, editForm, setEditForm)}
+                      >
+                        <option value="">Select interval</option>
+                        {minuteIntervals.map((m) => (
+                          <option key={m} value={m}>{`Every ${m} min`}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-secondary" onClick={closeEdit}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn btn-brand">
+                      Save
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
