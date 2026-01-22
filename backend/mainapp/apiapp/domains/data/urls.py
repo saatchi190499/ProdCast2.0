@@ -10,6 +10,7 @@ from apiapp.domains.data.views import (
     InternalRecordsView,
     MainClassHistoryView,
     PIRecordsView,
+    WorkflowOutputsView,
     fetch_pi_value_for_component_row,
     pi_history_for_component_row,
 )
@@ -26,6 +27,7 @@ urlpatterns = [
     path("components/pi-records/<int:component_id>/row/<int:row_id>/history/", pi_history_for_component_row),
     path("components/pi-records/<int:component_id>/", PIRecordsView.as_view()),
     path("components/decline-curves/<int:component_id>/", DeclineCurvesView.as_view()),
+    path("components/<int:component_id>/workflow-outputs/", WorkflowOutputsView.as_view()),
 ]
 
 __all__ = ["urlpatterns"]

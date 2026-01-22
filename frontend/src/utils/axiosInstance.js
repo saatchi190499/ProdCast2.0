@@ -59,6 +59,14 @@ export const localApi = axios.create({
 
 // На всякий случай - обнуляем таймаут в перехватчике, если где-то его перезапишут
 localApi.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  const refresh = getRefreshToken();
+  if (refresh) {
+    config.headers["X-Refresh-Token"] = refresh;
+  }
   config.timeout = 0;
   return config;
 });

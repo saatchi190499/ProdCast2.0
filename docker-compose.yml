@@ -24,8 +24,32 @@ services:
     command: python manage.py runserver 0.0.0.0:8000
     env_file:
       - ./backend/mainapp/.env.development   # для Django
+    volumes:
+      - media_data:/app/mainapp/media
     ports:
       - "8000:8000"
+    depends_on:
+      - redis
+
+  celery_worker:
+    build:
+      context: ./backend
+    command: ["celery", "-A", "mainapp", "worker", "-l", "info"]
+    env_file:
+      - ./backend/mainapp/.env.development
+    volumes:
+      - media_data:/app/mainapp/media
+    depends_on:
+      - redis
+
+  celery_beat:
+    build:
+      context: ./backend
+    command: ["celery", "-A", "mainapp", "beat", "-l", "info"]
+    env_file:
+      - ./backend/mainapp/.env.development
+    volumes:
+      - media_data:/app/mainapp/media
     depends_on:
       - redis
 
@@ -47,3 +71,4 @@ services:
 
 volumes:
   redis_data:
+  media_data:
