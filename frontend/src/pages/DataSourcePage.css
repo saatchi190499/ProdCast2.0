@@ -357,3 +357,158 @@ html[data-theme="violet"] {
   flex-direction: column;
   overflow: hidden;
 }
+
+
+/* ---------- History modal ---------- */
+.history-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.history-summary {
+  border: 1px solid var(--brand-outline);
+  background: var(--brand-50a);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+}
+
+.history-summary-title {
+  color: var(--brand);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.history-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.35rem 1rem;
+  font-size: 0.9rem;
+}
+
+.history-summary-grid span {
+  color: var(--brand);
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.history-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.history-range-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.history-range-btn {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 999px;
+}
+
+.history-range-btn.active {
+  background: var(--brand-700);
+  border-color: var(--brand-700);
+}
+
+.history-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.history-range-inputs .ds-input {
+  max-width: 160px;
+}
+
+.history-range-sep {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.history-chart {
+  height: 240px;
+  border: 1px solid var(--brand-outline);
+  border-radius: 14px;
+  padding: 0.5rem 0.75rem;
+  background: var(--brand-50a);
+}
+
+
+.history-unit-select {
+  min-width: 220px;
+}
+
+.history-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.history-table-header,
+.history-table-body table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.history-table-header {
+  margin-bottom: 0;
+}
+
+.history-table-body {
+  max-height: 260px;
+  overflow: auto;
+}
+
+
+.history-table-body table {
+  margin-bottom: 0;
+}
+
+.history-table-header thead th {
+  background: var(--brand);
+  color: var(--brand-text-on);
+}
+
+
+/* ---------- Records table (fixed header + scroll body) ---------- */
+.records-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.records-table-header,
+.records-table-body table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.records-table-header {
+  margin-bottom: 0;
+}
+
+.records-table-body {
+  max-height: calc(100vh - 300px);
+  overflow: auto;
+}
+
+
+.records-table-body table {
+  margin-bottom: 0;
+}
+
+
+.records-table col.col-auto { width: auto; }
+.records-table col.col-90 { width: 90px; }
+.records-table col.col-120 { width: 120px; }
+.records-table col.col-140 { width: 140px; }
+.records-table col.col-160 { width: 160px; }
+.records-table col.col-180 { width: 180px; }
+.records-table col.col-220 { width: 220px; }

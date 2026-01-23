@@ -1,15 +1,123 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../utils/axiosInstance";
 import { Card, Table, Button, Form, Spinner, Alert, Modal } from "react-bootstrap";
+import { Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  TimeScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  Filler,
+} from "chart.js";
+import "chartjs-adapter-date-fns";
 import { saveAs } from "file-saver";
 import Papa from "papaparse";
 import { useTranslation } from "react-i18next";
 import useWellBranches from "./useWellBranches";
 import "../DataSourcePage.css";
 
+const HistoryDataCursorPlugin = {
+  id: "historyDataCursor",
+  afterEvent(chart, args) {
+    const { event } = args;
+    if (!event) return;
+    if (event.type === "mouseout") {
+      chart._historyCursor = null;
+      chart.draw();
+      return;
+    }
+    if (event.type !== "mousemove") return;
+    const points = chart.getElementsAtEventForMode(
+      event,
+      "nearest",
+      { intersect: false },
+      true
+    );
+    if (!points.length) {
+      chart._historyCursor = null;
+      chart.draw();
+      return;
+    }
+    const first = points[0];
+    const parsed = first.element?.$context?.parsed || {};
+    chart._historyCursor = {
+      x: first.element.x,
+      y: first.element.y,
+      xValue: parsed.x,
+      yValue: parsed.y,
+    };
+    chart.draw();
+  },
+  afterDatasetsDraw(chart) {
+    const cursor = chart._historyCursor;
+    const { ctx, chartArea } = chart;
+    if (!cursor || !chartArea) return;
+    const { x } = cursor;
 
-export default function EventRecordsPage({ apiPathPrefix = "events", headingLabel, readOnly = false, showTag = false } = {}) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(29, 172, 190, 0.7)";
+    ctx.stroke();
+
+    const pluginOpts = chart.options?.plugins?.historyDataCursor || {};
+    const unit = pluginOpts.unit || "";
+    const decimals = Number.isFinite(pluginOpts.decimals) ? pluginOpts.decimals : null;
+
+    const formatX = (() => {
+      if (!cursor.xValue) return "";
+      const dt = new Date(cursor.xValue);
+      if (isNaN(dt.getTime())) return String(cursor.xValue);
+      return dt.toLocaleString();
+    })();
+
+    let yLabel = "";
+    if (cursor.yValue !== undefined && cursor.yValue !== null) {
+      const yNum = Number(cursor.yValue);
+      if (!isNaN(yNum)) {
+        yLabel = decimals === null ? String(yNum) : yNum.toFixed(decimals);
+      } else {
+        yLabel = String(cursor.yValue);
+      }
+    }
+    if (unit && yLabel) yLabel = `${yLabel} ${unit}`;
+
+    const label = formatX && yLabel ? `${formatX} | ${yLabel}` : (formatX || yLabel);
+
+    if (label) {
+      ctx.font = "12px sans-serif";
+      const padding = 6;
+      const metrics = ctx.measureText(label);
+      const boxW = metrics.width + padding * 2;
+      const boxH = 20;
+      let boxX = x + 8;
+      const boxY = chartArea.top + 6;
+      if (boxX + boxW > chartArea.right) {
+        boxX = x - 8 - boxW;
+      }
+      ctx.fillStyle = "rgba(29, 172, 190, 0.12)";
+      ctx.strokeStyle = "rgba(29, 172, 190, 0.6)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.rect(boxX, boxY, boxW, boxH);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#137f8f";
+      ctx.fillText(label, boxX + padding, boxY + 14);
+    }
+    ctx.restore();
+  },
+};
+
+ChartJS.register(TimeScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler, HistoryDataCursorPlugin);
+
+export default function EventRecordsPage({ apiPathPrefix = "events", headingLabel, readOnly = false, showTag = false, showTime = false } = {}) {
   const { wellBranches, loadingBranches } = useWellBranches();
   const { id } = useParams();
   const { t } = useTranslation();
@@ -26,6 +134,12 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
   const [sortAsc, setSortAsc] = useState(true);
   const [bulkEdit, setBulkEdit] = useState({ field: "", value: "" });
 
+  const recordsBodyRef = useRef(null);
+  const [recordsScrollPad, setRecordsScrollPad] = useState(0);
+
+  const historyBodyRef = useRef(null);
+  const [historyScrollPad, setHistoryScrollPad] = useState(0);
+
   const [typeOptions, setTypeOptions] = useState([]);
   const [instanceOptions, setInstanceOptions] = useState({});
   const [propertyOptions, setPropertyOptions] = useState({});
@@ -37,6 +151,25 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
   const [historyError, setHistoryError] = useState(null);
   const [historyRow, setHistoryRow] = useState(null);
   const [historyData, setHistoryData] = useState([]);
+  const [historyRangePreset, setHistoryRangePreset] = useState("30d");
+  const [historyStart, setHistoryStart] = useState("");
+  const [historyEnd, setHistoryEnd] = useState("");
+
+  const formatDateTimeLocal = (value) => {
+    if (!value) return "";
+    if (typeof value === "string" && value.includes("T") && value.length >= 16) {
+      return value.slice(0, 16);
+    }
+    const dt = new Date(value);
+    if (isNaN(dt.getTime())) return String(value || "");
+    const yyyy = String(dt.getFullYear());
+    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getDate()).padStart(2, "0");
+    const hh = String(dt.getHours()).padStart(2, "0");
+    const min = String(dt.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  };
+
   const emptyRow = {
     date_time: "", object_type: "", object_instance: "", object_type_property: "",
     value: "", tag: "", sub_data_source: "", description: ""
@@ -112,6 +245,47 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
     }
     setFilteredRecords(filtered);
   };
+
+
+  useEffect(() => {
+    const el = recordsBodyRef.current;
+    if (!el) return;
+    const update = () => {
+      const pad = el.offsetWidth - el.clientWidth;
+      setRecordsScrollPad(pad > 0 ? pad : 0);
+    };
+    update();
+    let ro;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(update);
+      ro.observe(el);
+    }
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      if (ro) ro.disconnect();
+    };
+  }, [filteredRecords.length]);
+
+  useEffect(() => {
+    const el = historyBodyRef.current;
+    if (!el) return;
+    const update = () => {
+      const pad = el.offsetWidth - el.clientWidth;
+      setHistoryScrollPad(pad > 0 ? pad : 0);
+    };
+    update();
+    let ro;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(update);
+      ro.observe(el);
+    }
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      if (ro) ro.disconnect();
+    };
+  }, [historyData.length, showHistory]);
 
   useEffect(() => {
     api.get("/unit-system-property-mapping/").then(res => {
@@ -437,6 +611,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
     setShowHistory(true);
     setHistoryLoading(true);
     setHistoryError(null);
+    setHistoryRangePreset("30d");
     try {
       const res = await api.get(`/components/${id}/row/${row.data_set_id}/history/`);
       setHistoryData(res.data || []);
@@ -449,9 +624,125 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
   };
 
 
+  const formatDateInput = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "";
+    const yyyy = String(d.getFullYear());
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const computePresetRange = (preset, data) => {
+    if (preset === "all") return { start: "", end: "" };
+    const times = (data || [])
+      .map((h) => new Date(h.time))
+      .filter((d) => !isNaN(d.getTime()));
+    const endDate = times.length ? new Date(Math.max(...times)) : new Date();
+    const startDate = new Date(endDate);
+    const daysMap = { "7d": 6, "30d": 29, "90d": 89, "1y": 364 };
+    const backDays = daysMap[preset] ?? 29;
+    startDate.setDate(startDate.getDate() - backDays);
+    return { start: formatDateInput(startDate), end: formatDateInput(endDate) };
+  };
+
+  useEffect(() => {
+    if (!showHistory || historyRangePreset === "custom") return;
+    const { start, end } = computePresetRange(historyRangePreset, historyData);
+    setHistoryStart(start);
+    setHistoryEnd(end);
+  }, [showHistory, historyRangePreset, historyData]);
+
+  const historyFiltered = useMemo(() => {
+    const start = historyStart ? new Date(historyStart) : null;
+    const end = historyEnd ? new Date(historyEnd) : null;
+    if (start && !isNaN(start.getTime())) start.setHours(0, 0, 0, 0);
+    if (end && !isNaN(end.getTime())) end.setHours(23, 59, 59, 999);
+    return (historyData || []).filter((h) => {
+      const dt = h.time ? new Date(h.time) : null;
+      if (!dt || isNaN(dt.getTime())) return false;
+      if (start && dt < start) return false;
+      if (end && dt > end) return false;
+      return true;
+    });
+  }, [historyData, historyStart, historyEnd]);
+
+  const historyChartData = useMemo(() => {
+    const propName = historyRow?.object_type_property || "";
+    const { scale, offset } = getConversionForProperty(propName);
+    const points = historyFiltered
+      .map((h) => {
+        const dt = h.time ? new Date(h.time) : null;
+        if (!dt || isNaN(dt.getTime())) return null;
+        const numericCandidate = typeof h.value === "string" ? h.value.replace(",", ".") : h.value;
+        if (numericCandidate === "" || numericCandidate === null || isNaN(Number(numericCandidate))) return null;
+        const baseValue = Number(numericCandidate);
+        const displayValue = baseValue * scale + offset;
+        return { x: dt, y: displayValue };
+      })
+      .filter(Boolean);
+
+    return {
+      datasets: [
+        {
+          label: propName || (t("value") || "Value"),
+          data: points,
+          borderColor: "#1dacbe",
+          backgroundColor: "rgba(29, 172, 190, 0.18)",
+          fill: true,
+          tension: 0.25,
+          pointRadius: 2,
+        },
+      ],
+    };
+  }, [historyFiltered, historyRow, unitSystemMappings, selectedUnitSystemId, t]);
+
+  const historyChartOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    parsing: false,
+    interaction: { mode: "nearest", intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false },
+      historyDataCursor: {
+        unit: getUnitForProperty(historyRow?.object_type_property || ""),
+        decimals: 3,
+      },
+    },
+    scales: {
+      x: {
+        type: "time",
+        time: { unit: "day", tooltipFormat: "dd/MM/yyyy HH:mm" },
+        grid: { display: false },
+      },
+      y: {
+        ticks: { maxTicksLimit: 5 },
+        title: {
+          display: true,
+          text: `${t("value") || "Value"}${historyRow?.object_type_property ? ` (${getUnitForProperty(historyRow.object_type_property) || ""})` : ""}`.trim(),
+        },
+      },
+    },
+  }), [historyRow, selectedUnitSystemId, unitSystemMappings, t]);
+
+
 
   if (loading) return <Spinner animation="border" />;
   if (error) return <Alert variant="danger">{error}</Alert>;
+
+  const colClasses = [
+    "col-auto",
+    "col-140",
+    "col-160",
+    "col-180",
+    ...(showTag ? ["col-120"] : []),
+    "col-160",
+    "col-140",
+    "col-220",
+    "col-90",
+  ];
 
   return (
     <>
@@ -516,9 +807,14 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
           ))}
         </Form.Select>
       </div>
-      <div className="brand-scroll" style={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto" }}>
-        <Table bordered size="sm" className="rounded ds-table">
-          <thead className="ds-thead sticky-top">
+      <div className="records-table">
+        <div className="records-table-head" style={{ paddingRight: recordsScrollPad }}><Table bordered size="sm" className="rounded ds-table records-table-header">
+          <colgroup>
+            {colClasses.map((cls, idx) => (
+              <col key={idx} className={cls} />
+            ))}
+          </colgroup>
+          <thead className="ds-thead">
             <tr>
               {[
                 { key: "date_time", label: t("date") },
@@ -542,19 +838,27 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
               ))}
             </tr>
           </thead>
-
-          <tbody>
-            {filteredRecords.map((r, i) => {
-              const realIndex = records.findIndex(x => x === r);
-              const error = errorsMap[realIndex] || {};
-              const dateOnly = (r.date_time || "").split('T')[0];
-              return (
-                <tr key={i}>
+        </Table></div>
+        <div className="records-table-body" ref={recordsBodyRef}>
+          <Table bordered size="sm" className="rounded ds-table">
+            <colgroup>
+              {colClasses.map((cls, idx) => (
+                <col key={idx} className={cls} />
+              ))}
+            </colgroup>
+            <tbody>
+              {filteredRecords.map((r, i) => {
+                const realIndex = records.findIndex(x => x === r);
+                const error = errorsMap[realIndex] || {};
+                const dateOnly = (r.date_time || "").split('T')[0];
+              const dateValue = showTime ? formatDateTimeLocal(r.date_time) : dateOnly;
+                return (
+                  <tr key={i}>
                   <td className={error.date_time ? 'cell-error' : ''}>
                     <Form.Control
                       className="ds-input"
-                      type="date"
-                      value={dateOnly}
+                      type={showTime ? "datetime-local" : "date"}
+                      value={dateValue}
                       disabled={readOnly}
                       onChange={(e) => handleChange(i, "date_time", e.target.value)}
                     />
@@ -701,9 +1005,10 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
           </tbody>
 
         </Table>
+        </div>
       </div>
     </Card>
-    <Modal show={showHistory} onHide={() => setShowHistory(false)} size="lg" centered>
+    <Modal show={showHistory} onHide={() => setShowHistory(false)} size="xl" centered>
       <Modal.Header closeButton>
         <Modal.Title>
           {t("history") || "History"} #{historyRow?.data_set_id ?? ""}
@@ -715,23 +1020,113 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
         ) : historyError ? (
           <Alert variant="danger">{String(historyError)}</Alert>
         ) : historyData.length > 0 ? (
-          <div className="table-responsive">
-            <Table bordered hover size="sm" className="ds-table">
-              <thead>
-                <tr>
-                  <th>{t("time") || "Time"}</th>
-                  <th>{t("value") || "Value"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historyData.map((h) => (
-                  <tr key={h.id}>
-                    <td>{h.time ? new Date(h.time).toLocaleString() : ""}</td>
-                    <td>{h.value ?? ""}</td>
-                  </tr>
+          <div className="history-modal">
+            <div className="history-summary">
+              <div className="history-summary-grid">
+                <div><span>Type:</span> {historyRow?.object_type || "-"}</div>
+                <div><span>Instance:</span> {historyRow?.object_instance || "-"}</div>
+                <div><span>Property:</span> {historyRow?.object_type_property || "-"}</div>
+                <div><span>Tag:</span> {historyRow?.tag || "-"}</div>
+                <div><span>Category:</span> {historyRow?.sub_data_source || "-"}</div>
+              </div>
+            </div>
+
+            <div className="history-toolbar">
+            <div className="history-unit-select">
+              <Form.Select
+                className="ds-input"
+                value={selectedUnitSystemId || ""}
+                onChange={e => setSelectedUnitSystemId(Number(e.target.value))}
+              >
+                <option value="">Select Unit System</option>
+                {unitSystemMappings.map(system => (
+                  <option key={system.unit_system_id} value={system.unit_system_id}>
+                    {system.unit_system_name}
+                  </option>
                 ))}
-              </tbody>
-            </Table>
+              </Form.Select>
+            </div>
+
+              <div className="history-range-buttons">
+                {[
+                  { key: "7d", label: "7D" },
+                  { key: "30d", label: "30D" },
+                  { key: "90d", label: "90D" },
+                  { key: "1y", label: "1Y" },
+                  { key: "all", label: "All" },
+                ].map((r) => (
+                  <Button
+                    key={r.key}
+                    size="sm"
+                    variant="none"
+                    className={`btn-brand history-range-btn ${historyRangePreset === r.key ? "active" : ""}`}
+                    onClick={() => setHistoryRangePreset(r.key)}
+                  >
+                    {r.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="history-range-inputs">
+                <Form.Control
+                  type="date"
+                  className="ds-input"
+                  value={historyStart}
+                  onChange={(e) => {
+                    setHistoryRangePreset("custom");
+                    setHistoryStart(e.target.value);
+                  }}
+                />
+                <span className="history-range-sep">-</span>
+                <Form.Control
+                  type="date"
+                  className="ds-input"
+                  value={historyEnd}
+                  onChange={(e) => {
+                    setHistoryRangePreset("custom");
+                    setHistoryEnd(e.target.value);
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="history-chart">
+              <Line data={historyChartData} options={historyChartOptions} height={220} />
+            </div>
+
+            <div className="history-table">
+              <div className="history-table-head" style={{ paddingRight: historyScrollPad }}><Table bordered hover size="sm" className="rounded ds-table history-table-header">
+                <thead className="ds-thead">
+                  <tr>
+                    <th>{t("time") || "Time"}</th>
+                    <th>{t("value") || "Value"}</th>
+                  </tr>
+                </thead>
+              </Table></div>
+              <div className="history-table-body" ref={historyBodyRef}>
+                <Table bordered hover size="sm" className="rounded ds-table">
+                  <tbody>
+                    {historyFiltered.map((h) => {
+                      const propName = historyRow?.object_type_property || "";
+                      const { scale, offset } = getConversionForProperty(propName);
+                      const rawValue = h.value;
+                      const numericCandidate = typeof rawValue === "string" ? rawValue.replace(",", ".") : rawValue;
+                      const displayValue = !isNaN(Number(numericCandidate))
+                        ? `${Number(numericCandidate) * scale + offset}`
+                        : rawValue;
+                      return (
+                        <tr key={h.id}>
+                          <td>{h.time ? new Date(h.time).toLocaleString() : ""}</td>
+                          <td>
+                            {displayValue ?? ""}
+                            {getUnitForProperty(propName) ? ` ${getUnitForProperty(propName)}` : ""}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </Table>
+              </div>
+            </div>
           </div>
         ) : (
           <Alert variant="info">{t("noData") || "No history yet."}</Alert>

@@ -4,6 +4,7 @@ from typing import Iterable, Optional, Sequence
 
 from django.db.models import Q, QuerySet
 from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 
 from apiapp.domains.catalog.models import ObjectInstance, ObjectType, ObjectTypeProperty
 from apiapp.domains.data.models import DataSourceComponent, MainClass, MainClassHistory
@@ -206,10 +207,14 @@ def get_history(
     if start:
         dt = parse_datetime(start)
         if dt:
+            if timezone.is_naive(dt):
+                dt = timezone.make_aware(dt, timezone.get_current_timezone())
             qs = qs.filter(time__gte=dt)
     if end:
         dt = parse_datetime(end)
         if dt:
+            if timezone.is_naive(dt):
+                dt = timezone.make_aware(dt, timezone.get_current_timezone())
             qs = qs.filter(time__lte=dt)
 
     qs = qs.order_by("time")
@@ -223,6 +228,9 @@ def get_history(
             "main_record_id",
             "time",
             "value",
+            "main_record__object_type_id",
+            "main_record__object_instance_id",
+            "main_record__object_type_property_id",
         )
     )
 

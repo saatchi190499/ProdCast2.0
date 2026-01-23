@@ -35,5 +35,5 @@ export default function InternalRecordsPage() {
   const readOnly = mode === "SERIES";
   const headingLabel = mode === "CONSTANTS" ? "Internal (Constants)" : "Internal (Series)";
 
-  return <EventRecordsPage apiPathPrefix="internal" headingLabel={headingLabel} readOnly={readOnly} showTag />;
+  return <EventRecordsPage apiPathPrefix="internal" headingLabel={headingLabel} readOnly={readOnly} showTag showTime />;
 }

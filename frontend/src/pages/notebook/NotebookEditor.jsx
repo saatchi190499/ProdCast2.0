@@ -379,6 +379,9 @@ export default function NotebookEditor() {
     const instancesLiteral = selectedInstances.length
       ? `[${selectedInstances.map((n) => JSON.stringify(n)).join(", ")}]`
       : "[]";
+    const propertiesLiteral = selectedProperties.length
+      ? `[${selectedProperties.map((n) => JSON.stringify(n)).join(", ")}]`
+      : "[]";
     const startLiteral = internalStart ? JSON.stringify(internalStart) : "None";
     const endLiteral = internalEnd ? JSON.stringify(internalEnd) : "None";
 
