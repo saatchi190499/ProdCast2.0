@@ -647,6 +647,14 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
     return { start: formatDateInput(startDate), end: formatDateInput(endDate) };
   };
 
+  const applyHistoryPreset = (preset) => {
+    setHistoryRangePreset(preset);
+    if (preset === "custom") return;
+    const { start, end } = computePresetRange(preset, historyData);
+    setHistoryStart(start);
+    setHistoryEnd(end);
+  };
+
   useEffect(() => {
     if (!showHistory || historyRangePreset === "custom") return;
     const { start, end } = computePresetRange(historyRangePreset, historyData);
@@ -667,6 +675,14 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
       return true;
     });
   }, [historyData, historyStart, historyEnd]);
+
+  const historyRangeBounds = useMemo(() => {
+    const start = historyStart ? new Date(`${historyStart}T00:00:00`) : null;
+    const end = historyEnd ? new Date(`${historyEnd}T23:59:59.999`) : null;
+    const min = start && !isNaN(start.getTime()) ? start : undefined;
+    const max = end && !isNaN(end.getTime()) ? end : undefined;
+    return { min, max };
+  }, [historyStart, historyEnd]);
 
   const historyChartData = useMemo(() => {
     const propName = historyRow?.object_type_property || "";
@@ -716,6 +732,8 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
         type: "time",
         time: { unit: "day", tooltipFormat: "dd/MM/yyyy HH:mm" },
         grid: { display: false },
+        min: historyRangeBounds.min,
+        max: historyRangeBounds.max,
       },
       y: {
         ticks: { maxTicksLimit: 5 },
@@ -725,8 +743,9 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
         },
       },
     },
-  }), [historyRow, selectedUnitSystemId, unitSystemMappings, t]);
+  }), [historyRow, selectedUnitSystemId, unitSystemMappings, t, historyRangeBounds]);
 
+  const hasHistoryInRange = historyFiltered.length > 0;
 
 
   if (loading) return <Spinner animation="border" />;
@@ -1019,7 +1038,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
           <Spinner animation="border" />
         ) : historyError ? (
           <Alert variant="danger">{String(historyError)}</Alert>
-        ) : historyData.length > 0 ? (
+        ) : hasHistoryInRange ? (
           <div className="history-modal">
             <div className="history-summary">
               <div className="history-summary-grid">
@@ -1060,7 +1079,7 @@ export default function EventRecordsPage({ apiPathPrefix = "events", headingLabe
                     size="sm"
                     variant="none"
                     className={`btn-brand history-range-btn ${historyRangePreset === r.key ? "active" : ""}`}
-                    onClick={() => setHistoryRangePreset(r.key)}
+                    onClick={() => applyHistoryPreset(r.key)}
                   >
                     {r.label}
                   </Button>
