@@ -13,8 +13,13 @@ export default function NotebookCell({ cell, onChange, output, onFocus }) {
 
     const updateSize = () => {
       try {
-        const contentHeight = editor.getContentHeight();
-        const newHeight = Math.max(120, contentHeight + 16);
+        const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
+        const lineCount = editor.getModel()?.getLineCount?.() || 1;
+        const paddingOpt = editor.getOption(monaco.editor.EditorOption.padding);
+        const paddingTop = paddingOpt?.top ?? 8;
+        const paddingBottom = paddingOpt?.bottom ?? 8;
+        const contentHeight = lineCount * lineHeight + paddingTop + paddingBottom;
+        const newHeight = Math.max(120, contentHeight + 4);
         setHeight(newHeight);
         editor.layout();
       } catch {}

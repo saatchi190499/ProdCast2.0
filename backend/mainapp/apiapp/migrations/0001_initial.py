@@ -136,6 +136,12 @@ class Migration(migrations.Migration):
                 ('created_date', models.DateTimeField(auto_now_add=True)),
                 ('last_updated', models.DateTimeField(blank=True, null=True)),
                 ('file', models.FileField(blank=True, null=True, upload_to='models_files/')),
+                ('internal_mode', models.CharField(
+                    choices=[('SERIES', 'Series'), ('CONSTANTS', 'Constants')],
+                    default='SERIES',
+                    max_length=20,
+                    verbose_name='Internal Mode'
+                )),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
                 ('data_source', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='apiapp.datasource', verbose_name='Data Source')),
             ],

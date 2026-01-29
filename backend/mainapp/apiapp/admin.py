@@ -241,6 +241,16 @@ class WorkflowAdmin(admin.ModelAdmin):
     )
     search_fields = ("component__name",)
     readonly_fields = ("updated_at", "code_file", "ipynb_file", "preview_cells")
+    fields = (
+        "component",
+        "updated_at",
+        "inputs_config",
+        "outputs_config",
+        "cells",
+        "preview_cells",
+        "code_file",
+        "ipynb_file",
+    )
 
     # --- File download links ---
     def code_link(self, obj):
