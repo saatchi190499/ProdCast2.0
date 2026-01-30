@@ -26,6 +26,7 @@ from apiapp.domains.workflow.serializers import (
 from apiapp.services.scheduler_runner import run_due_workflow_schedules
 from mainapp.celery import app as celery_app
 from apiapp.utils.notebook_converter import block_to_python, python_to_block
+from apiapp.utils.workflow_tables_bootstrap import build_workflow_tables_bootstrap
 
 
 def workflow_version_path(workflow, ext="py"):
@@ -137,8 +138,9 @@ class WorkflowViewSet(viewsets.ModelViewSet):
             src = block_to_python(cell)
             code_lines.append(src)
             nb.cells.append(nbformat.v4.new_code_cell(src))
-
-        code_text = "\n\n".join(code_lines)
+        tz_name = timezone.get_current_timezone_name()
+        bootstrap = build_workflow_tables_bootstrap(workflow.inputs_config, workflow.outputs_config, tz_name)
+        code_text = "\n\n".join([bootstrap, "\n\n".join(code_lines)] if bootstrap else ["\n\n".join(code_lines)])
 
         py_path = Path(settings.MEDIA_ROOT) / workflow_version_path(workflow, "py")
         py_path.parent.mkdir(parents=True, exist_ok=True)

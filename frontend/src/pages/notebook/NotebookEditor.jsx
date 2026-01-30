@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
 import NotebookCell from "./NotebookCell";
 import PropertyEditor from "./PropertyEditor";
@@ -8,6 +8,8 @@ import { usePetexTips } from "./context/PetexTipsContext";
 import { useMonaco } from "@monaco-editor/react";
 import { useParams } from "react-router-dom";
 import { registerPythonProviders } from "./utils/registerPythonProviders";
+import WorkflowTablesConfigModal from "./WorkflowTablesConfigModal";
+import { buildWorkflowTablesBootstrap } from "./utils/buildWorkflowTablesBootstrap";
 import {
   ArrowUp,
   ArrowDown,
@@ -39,36 +41,49 @@ export default function NotebookEditor() {
   const [selectedVersion, setSelectedVersion] = useState("");
   const [activeVersion, setActiveVersion] = useState("");
   const [autoCollapsePrevious, setAutoCollapsePrevious] = useState(true);
-  const [showInternalModal, setShowInternalModal] = useState(false);
-  const [internalSection, setInternalSection] = useState("components");
+  const [showInputsModal, setShowInputsModal] = useState(false);
+  const [inputsConfig, setInputsConfig] = useState({ tabs: [] });
+  const [outputsConfig, setOutputsConfig] = useState({ mode: "append", saveTarget: "local", tabs: [] });
+  const workflowTableHints = useMemo(() => {
+    const ident = (name) => {
+      const s = String(name || "").replace(/[^a-zA-Z0-9_]/g, "");
+      if (!s) return "_Table";
+      return /^\d/.test(s) ? `_${s}` : s;
+    };
+
+    const build = (tabs, suffix) =>
+      (tabs || []).filter(Boolean).map((tab) => {
+        const base = ident(tab.type);
+        return {
+          name: `${base}${suffix}`,
+          columns: (tab.columns || []).map((c) => c.label).filter(Boolean),
+          rows: (tab.instances || []).filter(Boolean),
+          variant: suffix.includes('Outputs') ? 'outputs' : 'inputs',
+        };
+      });
+
+    return [
+      ...build(inputsConfig?.tabs, 'InputsTable'),
+      ...build(outputsConfig?.tabs, 'OutputsTable'),
+      { name: 'inputs', variant: 'config' },
+      { name: 'outputs', variant: 'config' },
+    ];
+  }, [inputsConfig, outputsConfig]);
   const [internalLoading, setInternalLoading] = useState(false);
   const [internalComponents, setInternalComponents] = useState([]);
   const [objectTypes, setObjectTypes] = useState([]);
   const [instancesByType, setInstancesByType] = useState({});
   const [propertyOptions, setPropertyOptions] = useState({});
-  const [selectedComponents, setSelectedComponents] = useState([]);
-  const [selectedObjectType, setSelectedObjectType] = useState("");
-  const [selectedInstances, setSelectedInstances] = useState([]);
-  const [selectedProperties, setSelectedProperties] = useState([]);
-  const [internalStart, setInternalStart] = useState("");
-  const [internalEnd, setInternalEnd] = useState("");
   const [showOutputsModal, setShowOutputsModal] = useState(false);
-  const [outputComponentId, setOutputComponentId] = useState("");
-  const [outputObjectType, setOutputObjectType] = useState("");
-  const [outputInstance, setOutputInstance] = useState("");
-  const [outputProperty, setOutputProperty] = useState("");
-  const [outputValueExpr, setOutputValueExpr] = useState("value");
-  const [outputDescription, setOutputDescription] = useState("");
-  const [outputDateTime, setOutputDateTime] = useState("");
-  const [outputSaveTarget, setOutputSaveTarget] = useState("local");
-  const [outputMode, setOutputMode] = useState("append");
-  const [instanceFilter, setInstanceFilter] = useState("");
-  const [propertyFilter, setPropertyFilter] = useState("");
 
   useEffect(() => {
     if (!id) return;
     api.get(`/components/workflows/${id}/`)
-      .then(res => setCells(res.data.cells || []))
+      .then(res => {
+        setCells(res.data.cells || []);
+        setInputsConfig(res.data.inputs_config || { tabs: [] });
+        setOutputsConfig(res.data.outputs_config || { mode: "append", saveTarget: "local", tabs: [] });
+      })
       .catch(err => console.error("Failed to load workflow", err));
     loadVersions();
   }, [id]);
@@ -92,35 +107,64 @@ export default function NotebookEditor() {
   };
 
   useEffect(() => {
-    if (!showInternalModal) return;
+    if (!showInputsModal) return;
     loadInternalMeta();
-  }, [showInternalModal]);
+  }, [showInputsModal]);
 
   useEffect(() => {
     if (!showOutputsModal) return;
     loadInternalMeta();
   }, [showOutputsModal]);
 
+  const formatVersionLabel = (ts) => {
+    if (!ts) return "";
+    try {
+      const s = String(ts);
+      // backend uses YYYY-MM-DDTHH-MM-SS
+      const parts = s.split("T");
+      if (parts.length !== 2) return s;
+      const date = parts[0];
+      const time = parts[1].replace(/-(?=\d{2}$)/, ":").replace(/-(?=\d{2}:\d{2}$)/, ":");
+      const d = new Date(`${date}T${time}`);
+      if (Number.isNaN(d.getTime())) return s;
+      return new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }).format(d);
+    } catch {
+      return String(ts);
+    }
+  };
   const loadVersions = async () => {
     try {
       const res = await api.get(`/components/workflows/${id}/versions/`);
-      console.log("versions response:", res.data);   // 👀 check here
-      setVersions(res.data.versions || []);
-      setActiveVersion(res.data.active || "");
+      const payload = res.data || {};
+      setVersions(payload.versions || []);
+      const active = payload.active || "";
+      setActiveVersion(active);
+      setSelectedVersion((prev) => (prev ? prev : active));
+      return payload;
     } catch (err) {
       console.error("Failed to load versions", err);
+      return null;
     }
   };
 
 
+
   const saveNotebook = async () => {
     try {
-      await api.patch(`/components/workflows/${id}/`, { cells });
-      await loadVersions();
-      alert("✅ Notebook saved successfully!");
+      await api.patch(`/components/workflows/${id}/`, { cells, inputs_config: inputsConfig, outputs_config: outputsConfig });
+      const payload = await loadVersions();
+      if (payload?.active) setSelectedVersion(payload.active);
+      alert("Notebook saved successfully!");
     } catch (err) {
       console.error("Failed to save workflow", err);
-      alert("❌ Failed to save notebook");
+      alert("âŒ Failed to save notebook");
     }
   };
 
@@ -144,21 +188,22 @@ export default function NotebookEditor() {
       await api.post(`/components/workflows/${id}/register_version/`, {
         timestamp: selectedVersion,
       });
-      alert("✅ Version registered!");
-      await loadVersions();
+      alert("Version registered!");
+      const payload = await loadVersions();
+      if (payload?.active) setSelectedVersion(payload.active);
     } catch (err) {
       console.error("Failed to register version", err);
-      alert("❌ Failed to register version");
+      alert("âŒ Failed to register version");
     }
   };
 
 
-  // 🔹 Centralized provider registration
+  // Centralized provider registration
   useEffect(() => {
     if (monaco && tips) {
-      registerPythonProviders(monaco, tips);
+      registerPythonProviders(monaco, tips, workflowTableHints);
     }
-  }, [monaco, tips]);
+  }, [monaco, tips, workflowTableHints]);
 
   const createCell = (type) => {
     switch (type) {
@@ -183,7 +228,7 @@ export default function NotebookEditor() {
   const removeCell = async (id) => {
     const cell = cells.find((c) => c.id === id);
 
-    // if variable cell → delete its vars from backend
+    // if variable cell â†’ delete its vars from backend
     if (cell?.type === "variable") {
       (cell.metadata?.variables || []).forEach(async (v) => {
         try {
@@ -204,7 +249,7 @@ export default function NotebookEditor() {
     refreshTips(); // refresh autocomplete tips
   };
 
-  // 🔹 Reorder helpers
+  // Reorder helpers
   const reorderCells = (from, to) => {
     setCells((prev) => {
       const copy = [...prev];
@@ -217,27 +262,28 @@ export default function NotebookEditor() {
 
   const moveCellUp = (idx) => idx > 0 && reorderCells(idx, idx - 1);
   const moveCellDown = (idx) => idx < cells.length - 1 && reorderCells(idx, idx + 1);
-
   const runOne = async (cell) => {
-    const code = blockToPythonFromCell(cell);
+    const userCode = blockToPythonFromCell(cell);
+    const bootstrap = buildWorkflowTablesBootstrap(inputsConfig, outputsConfig);
+    const execCode = bootstrap ? bootstrap + "\n\n" + userCode : userCode;
 
-    // 🔹 mark cell as "loading"
+    // mark cell as "loading"
     setOutputs((prev) => ({
       ...prev,
-      [cell.id]: { loading: true, code },
+      [cell.id]: { loading: true, code: userCode },
     }));
 
     try {
-      const res = await localApi.post("/run_cell/", { code, workflow_component_id: Number(id) });
+      const res = await localApi.post("/run_cell/", { code: execCode, workflow_component_id: Number(id) });
       const { stdout, stderr, variables } = res.data;
 
-      // 🔹 finished, update with result
+      // finished, update with result
       setOutputs((prev) => ({
         ...prev,
-        [cell.id]: { stdout, stderr, code, loading: false },
+        [cell.id]: { stdout, stderr, code: userCode, loading: false },
       }));
 
-      // 🔹 update context vars instantly
+      // update context vars instantly
       if (variables) {
         const current = new Set(Object.keys(tips.__variables__ || {}));
         const fresh = new Set(Object.keys(variables));
@@ -255,7 +301,7 @@ export default function NotebookEditor() {
     } catch (err) {
       setOutputs((prev) => ({
         ...prev,
-        [cell.id]: { stdout: "", stderr: String(err), code, loading: false },
+        [cell.id]: { stdout: "", stderr: String(err), code: userCode, loading: false },
       }));
     }
   };
@@ -304,157 +350,10 @@ export default function NotebookEditor() {
 
   const resetKernel = async () => {
     try {
-      await localApi.post("/reset_context/"); // 🔹 use localApi
+      await localApi.post("/reset_context/"); // use localApi
     } catch { /* ignore */ }
     setOutputs({});
     setStepIdx(0);
-  };
-
-  const openInternalModal = (section) => {
-    setInternalSection(section);
-    setShowInternalModal(true);
-  };
-
-  const toggleSelectedComponent = (idValue) => {
-    setSelectedComponents((prev) => (
-      prev.includes(idValue) ? prev.filter((id) => id !== idValue) : [...prev, idValue]
-    ));
-  };
-
-  const toggleSelectedProperty = (name) => {
-    setSelectedProperties((prev) => (
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
-    ));
-  };
-
-  const toggleSelectedInstance = (name) => {
-    setSelectedInstances((prev) => (
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
-    ));
-  };
-
-  const buildInternalQueryCode = () => {
-    const componentList = selectedComponents.length
-      ? `[${selectedComponents.join(", ")}]`
-      : "[]";
-    const typeLiteral = selectedObjectType ? JSON.stringify(selectedObjectType) : "None";
-    const instancesLiteral = selectedInstances.length
-      ? `[${selectedInstances.map((n) => JSON.stringify(n)).join(", ")}]`
-      : "[]";
-    const propertiesLiteral = selectedProperties.length
-      ? `[${selectedProperties.map((n) => JSON.stringify(n)).join(", ")}]`
-      : "[]";
-
-    return [
-      "# Internal records selection",
-      `components = ${componentList}`,
-      `object_type = ${typeLiteral}`,
-      `instances = ${instancesLiteral}`,
-      `properties = ${propertiesLiteral}`,
-      "records = internal.get_records(",
-      "    components=components if components else None,",
-      "    object_type=object_type if object_type else None,",
-      "    instances=instances if instances else None,",
-      "    properties=properties if properties else None,",
-      ")",
-    ].join("\n");
-  };
-
-
-
-  const insertInternalQueryCell = () => {
-    const code = buildInternalQueryCode();
-    setCells((prev) => [
-      ...prev,
-      { id: uuidv4(), type: "code", source: code, label: "Internal Query" },
-    ]);
-    setShowInternalModal(false);
-  };
-
-  const buildInternalHistoryCode = () => {
-    const componentList = selectedComponents.length
-      ? `[${selectedComponents.join(", ")}]`
-      : "[]";
-    const typeLiteral = selectedObjectType ? JSON.stringify(selectedObjectType) : "None";
-    const instancesLiteral = selectedInstances.length
-      ? `[${selectedInstances.map((n) => JSON.stringify(n)).join(", ")}]`
-      : "[]";
-    const propertiesLiteral = selectedProperties.length
-      ? `[${selectedProperties.map((n) => JSON.stringify(n)).join(", ")}]`
-      : "[]";
-    const startLiteral = internalStart ? JSON.stringify(internalStart) : "None";
-    const endLiteral = internalEnd ? JSON.stringify(internalEnd) : "None";
-
-    return [
-      "# Internal history selection",
-      `components = ${componentList}`,
-      `object_type = ${typeLiteral}`,
-      `instances = ${instancesLiteral}`,
-      `properties = ${propertiesLiteral}`,
-      `start = ${startLiteral}`,
-      `end = ${endLiteral}`,
-      "history = internal.get_history(",
-      "    components=components if components else None,",
-      "    object_type=object_type if object_type else None,",
-      "    instances=instances if instances else None,",
-      "    properties=properties if properties else None,",
-      "    start=start,",
-      "    end=end,",
-      ")",
-    ].join("\n");
-  };
-
-  const insertInternalHistoryCell = () => {
-    const code = buildInternalHistoryCode();
-    setCells((prev) => [
-
-      ...prev,
-      { id: uuidv4(), type: "code", source: code, label: "Internal History" },
-    ]);
-    setShowInternalModal(false);
-  };
-
-  const buildOutputRecordCode = () => {
-    const componentLiteral = outputComponentId ? Number(outputComponentId) : "None";
-    const typeLiteral = outputObjectType ? JSON.stringify(outputObjectType) : "None";
-    const instanceLiteral = outputInstance ? JSON.stringify(outputInstance) : "None";
-    const propertyLiteral = outputProperty ? JSON.stringify(outputProperty) : "None";
-    const descLiteral = outputDescription ? JSON.stringify(outputDescription) : "None";
-    const dateLiteral = outputDateTime ? JSON.stringify(outputDateTime) : "None";
-    const valueExpr = outputValueExpr || "None";
-    const saveTo = outputSaveTarget === "db" ? "\"db\"" : "None";
-
-    return [
-      "# Workflow output save",
-      `component_id = ${componentLiteral}`,
-      `output_value = ${valueExpr}`,
-      "record = {",
-      "    \"component\": component_id,",
-      `    \"object_type\": ${typeLiteral},`,
-      `    \"object_instance\": ${instanceLiteral},`,
-      `    \"object_type_property\": ${propertyLiteral},`,
-      "    \"value\": output_value,",
-      `    \"date_time\": ${dateLiteral},`,
-      `    \"description\": ${descLiteral},`,
-      "}",
-      "records = [record]",
-      `workflow_save_output(records, mode="${outputMode}", save_to=${saveTo}, component_id=component_id)`,
-    ].join("\n");
-  };
-
-  const insertOutputCell = () => {
-    const code = buildOutputRecordCode();
-    setCells((prev) => [
-      ...prev,
-      { id: uuidv4(), type: "code", source: code, label: "Workflow Output" },
-    ]);
-    setShowOutputsModal(false);
-  };
-
-  const handleObjectTypeChange = (value) => {
-    setSelectedObjectType(value);
-    setSelectedInstances([]);
-    setSelectedProperties([]);
   };
 
   const insertCell = (index, type) => {
@@ -467,7 +366,7 @@ export default function NotebookEditor() {
 
   return (
     <div className="card" style={{ height: "95vh", display: "flex", flexDirection: "column" }}>
-      {/* 🔹 Toolbar pinned */}
+      {/* Toolbar pinned */}
       <div
         className="card-header d-flex align-items-center gap-2"
         style={{
@@ -503,7 +402,7 @@ export default function NotebookEditor() {
 
         <button
           className="btn-brand-outline toolbar-item gap-1"
-          onClick={() => openInternalModal("components")}
+          onClick={() => setShowInputsModal(true)}
         >
           <Code2 size={16} /> <span>Inputs</span>
         </button>
@@ -532,7 +431,7 @@ export default function NotebookEditor() {
           <option value="">-- Select version --</option>
           {versions.map((v) => (
             <option key={v} value={v}>
-              {v} {v === activeVersion ? " (active)" : ""}
+              {formatVersionLabel(v)}{v === activeVersion ? " (active)" : ""}
             </option>
           ))}
         </select>
@@ -551,14 +450,14 @@ export default function NotebookEditor() {
 
 
 
-      {/* 🔹 Scrollable notebook area */}
+      {/* Scrollable notebook area */}
       <div
         className="card-body brand-scroll"
         style={{
           flex: "1 1 auto",
           overflowY: "auto",
           padding: 16,
-          background: "var(--bs-body-bg)",  // ✅ auto light/dark
+          background: "var(--bs-body-bg)",  // auto light/dark
           color: "var(--bs-body-color)",
         }}
       >
@@ -613,7 +512,7 @@ export default function NotebookEditor() {
                 borderRadius: 12,
                 padding: 10,
                 marginBottom: 20,
-                background: "var(--bs-body-bg)",   // ✅ auto dark/light
+                background: "var(--bs-body-bg)",   // auto dark/light
                 color: "var(--bs-body-color)",
                 transition: "all 0.2s ease",
               }}
@@ -723,7 +622,7 @@ export default function NotebookEditor() {
                       fontSize: 12,
                       marginBottom: 8,
                       whiteSpace: "pre-wrap",
-                      color: "var(--bs-body-color)",  // ✅ readable in dark
+                      color: "var(--bs-body-color)",  // readable in dark
                     }}
                   >
                     {blockToPythonFromCell(cell)}
@@ -850,386 +749,33 @@ export default function NotebookEditor() {
         )}
       </div>
 
-      {showInternalModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setShowInternalModal(false)}
-        >
-          <div
-            className="ds-card"
-            style={{
-              background: "var(--bs-body-bg)",
-              color: "var(--bs-body-color)",
-              padding: 20,
-              borderRadius: 12,
-              minWidth: 640,
-              maxWidth: "80vw",
-              maxHeight: "80vh",
-              overflowY: "auto",
-              display: "grid",
-              gap: 12,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h4 className="ds-heading" style={{ margin: 0 }}>Internal Selection</h4>
-              <button className="btn-ghost" onClick={() => setShowInternalModal(false)}>
-                <X size={16} />
-              </button>
-            </div>
+            <WorkflowTablesConfigModal
+        open={showInputsModal}
+        title="Inputs"
+        variant="inputs"
+        config={inputsConfig}
+        setConfig={setInputsConfig}
+        onClose={() => setShowInputsModal(false)}
+        internalComponents={internalComponents}
+        objectTypes={objectTypes}
+        instancesByType={instancesByType}
+        propertyOptions={propertyOptions}
+      />
 
-            {internalLoading && <div>Loading...</div>}
+      <WorkflowTablesConfigModal
+        open={showOutputsModal}
+        title="Outputs"
+        variant="outputs"
+        config={outputsConfig}
+        setConfig={setOutputsConfig}
+        onClose={() => setShowOutputsModal(false)}
+        internalComponents={internalComponents}
+        objectTypes={objectTypes}
+        instancesByType={instancesByType}
+        propertyOptions={propertyOptions}
+      />
 
-            {!internalLoading && (
-              <>
-                <div data-ui="internal-columns" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, alignItems: "start" }}>
-                <div
-                  style={{
-                    border: internalSection === "components" ? "2px solid var(--brand)" : "1px solid var(--brand-outline)",
-                    borderRadius: 10,
-                    padding: 12,
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Components</div>
-                  {internalComponents.length === 0 && <div>No Internal components found.</div>}
-                  {internalComponents.length > 0 && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 6 }}>
-                      {internalComponents.map((comp) => (
-                        <label key={comp.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedComponents.includes(comp.id)}
-                            onChange={() => toggleSelectedComponent(comp.id)}
-                          />
-                          <span>{comp.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    border: internalSection === "object_type" ? "2px solid var(--brand)" : "1px solid var(--brand-outline)",
-                    borderRadius: 10,
-                    padding: 12,
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Object Type</div>
-                  <select
-                    className="form-select"
-                    value={selectedObjectType}
-                    onChange={(e) => handleObjectTypeChange(e.target.value)}
-                  >
-                    <option value="">Select object type...</option>
-                    {objectTypes.map((t) => (
-                      <option key={t.id} value={t.name}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div
-                  style={{
-                    border: internalSection === "instances" ? "2px solid var(--brand)" : "1px solid var(--brand-outline)",
-                    borderRadius: 10,
-                    padding: 12,
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Instance Group</div>
-                  <input
-                    className="form-control"
-                    value={instanceFilter}
-                    onChange={(e) => setInstanceFilter(e.target.value)}
-                    placeholder="Filter instances..."
-                    style={{ marginBottom: 8 }}
-                  />
-                  {!selectedObjectType && <div>Select an object type to see instances.</div>}
-                  {selectedObjectType && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 6 }}>
-                      {(instancesByType[selectedObjectType] || []).filter((inst) => !instanceFilter || String(inst.name).toLowerCase().includes(instanceFilter.toLowerCase())).map((inst) => (
-                        <label key={inst.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedInstances.includes(inst.name)}
-                            onChange={() => toggleSelectedInstance(inst.name)}
-                          />
-                          <span>{inst.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    border: internalSection === "properties" ? "2px solid var(--brand)" : "1px solid var(--brand-outline)",
-                    borderRadius: 10,
-                    padding: 12,
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Object Type Property</div>
-                  <input
-                    className="form-control"
-                    value={propertyFilter}
-                    onChange={(e) => setPropertyFilter(e.target.value)}
-                    placeholder="Filter properties..."
-                    style={{ marginBottom: 8 }}
-                  />
-                  {!selectedObjectType && <div>Select an object type to see properties.</div>}
-                  {selectedObjectType && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 6 }}>
-                      {(propertyOptions[selectedObjectType] || []).filter((prop) => !propertyFilter || String(prop.name).toLowerCase().includes(propertyFilter.toLowerCase())).map((prop) => (
-                        <label key={prop.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedProperties.includes(prop.name)}
-                            onChange={() => toggleSelectedProperty(prop.name)}
-                          />
-                          <span>{prop.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                </div>
-
-                <div
-                  style={{
-                    border: "1px solid var(--brand-outline)",
-                    borderRadius: 10,
-                    padding: 12,
-                  }}
-                >
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Date Range (History)</div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <input
-                      type="datetime-local"
-                      className="form-control"
-                      value={internalStart}
-                      onChange={(e) => setInternalStart(e.target.value)}
-                    />
-                    <input
-                      type="datetime-local"
-                      className="form-control"
-                      value={internalEnd}
-                      onChange={(e) => setInternalEnd(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                  <button
-                    className="btn-ghost"
-                    onClick={() => {
-                      setSelectedComponents([]);
-                      setSelectedObjectType("");
-                      setSelectedInstances([]);
-                    }}
-                  >
-                    Clear
-                  </button>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button className="btn-brand-outline" onClick={() => setShowInternalModal(false)}>
-                      Close
-                    </button>
-                    <button className="btn-brand" onClick={insertInternalQueryCell}>
-                      Insert Code Cell
-                    </button>
-                    <button className="btn-brand" onClick={insertInternalHistoryCell}>
-                      Insert History Cell
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {showOutputsModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setShowOutputsModal(false)}
-        >
-          <div
-            className="ds-card"
-            style={{
-              background: "var(--bs-body-bg)",
-              color: "var(--bs-body-color)",
-              padding: 20,
-              borderRadius: 12,
-              minWidth: 640,
-              maxWidth: "80vw",
-              maxHeight: "80vh",
-              overflowY: "auto",
-              display: "grid",
-              gap: 12,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h4 className="ds-heading" style={{ margin: 0 }}>Workflow Outputs</h4>
-              <button className="btn-ghost" onClick={() => setShowOutputsModal(false)}>
-                <X size={16} />
-              </button>
-            </div>
-
-            {internalLoading && <div>Loading...</div>}
-
-            {!internalLoading && (
-              <>
-                <div data-ui="internal-columns" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, alignItems: "start" }}>
-                <div>
-                  <label style={{ fontWeight: 600 }}>Component</label>
-                  <select
-                    className="form-select"
-                    value={outputComponentId}
-                    onChange={(e) => setOutputComponentId(e.target.value)}
-                  >
-                    <option value="">Select component...</option>
-                    {internalComponents.map((comp) => (
-                      <option key={comp.id} value={comp.id}>{comp.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontWeight: 600 }}>Object Type</label>
-                  <select
-                    className="form-select"
-                    value={outputObjectType}
-                    onChange={(e) => {
-                      setOutputObjectType(e.target.value);
-                      setOutputInstance("");
-                      setOutputProperty("");
-                    }}
-                  >
-                    <option value="">Select object type...</option>
-                    {objectTypes.map((t) => (
-                      <option key={t.id} value={t.name}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontWeight: 600 }}>Instance</label>
-                  <select
-                    className="form-select"
-                    value={outputInstance}
-                    onChange={(e) => setOutputInstance(e.target.value)}
-                    disabled={!outputObjectType}
-                  >
-                    <option value="">Select instance...</option>
-                    {(instancesByType[outputObjectType] || []).map((inst) => (
-                      <option key={inst.id} value={inst.name}>{inst.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontWeight: 600 }}>Object Type Property</label>
-                  <select
-                    className="form-select"
-                    value={outputProperty}
-                    onChange={(e) => setOutputProperty(e.target.value)}
-                    disabled={!outputObjectType}
-                  >
-                    <option value="">Select property...</option>
-                    {(propertyOptions[outputObjectType] || []).map((prop) => (
-                      <option key={prop.id} value={prop.name}>{prop.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontWeight: 600 }}>Value Expression</label>
-                  <input
-                    className="form-control"
-                    value={outputValueExpr}
-                    onChange={(e) => setOutputValueExpr(e.target.value)}
-                    placeholder="value"
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontWeight: 600 }}>Description (optional)</label>
-                  <input
-                    className="form-control"
-                    value={outputDescription}
-                    onChange={(e) => setOutputDescription(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontWeight: 600 }}>Date/Time (optional)</label>
-                  <input
-                    type="datetime-local"
-                    className="form-control"
-                    value={outputDateTime}
-                    onChange={(e) => setOutputDateTime(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <div>
-                    <label style={{ fontWeight: 600 }}>Save Target</label>
-                    <select
-                      className="form-select"
-                      value={outputSaveTarget}
-                      onChange={(e) => setOutputSaveTarget(e.target.value)}
-                    >
-                      <option value="local">Local JSON</option>
-                      <option value="db">Database</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ fontWeight: 600 }}>Mode</label>
-                    <select
-                      className="form-select"
-                      value={outputMode}
-                      onChange={(e) => setOutputMode(e.target.value)}
-                    >
-                      <option value="append">Append</option>
-                      <option value="replace">Replace</option>
-                    </select>
-                  </div>
-                </div>
-
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                  <button className="btn-brand-outline" onClick={() => setShowOutputsModal(false)}>
-                    Close
-                  </button>
-                  <button className="btn-brand" onClick={insertOutputCell}>
-                    Insert Output Cell
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-
-      {/* 🔹 Modal editor */}
+      {/* Modal editor */}
       {selectedCell && (
         <div
           style={{
@@ -1271,3 +817,7 @@ export default function NotebookEditor() {
 
 
 }
+
+
+
+

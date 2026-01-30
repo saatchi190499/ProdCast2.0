@@ -1,7 +1,18 @@
 let disposables = [];
 
-export function registerPythonProviders(monaco, tips) {
-  if (!monaco || !Object.keys(tips).length) return;
+export function registerPythonProviders(monaco, tips, extraGlobals = []) {
+  if (!monaco) return;
+
+  tips = tips || {};
+
+  const workflowGlobals = (extraGlobals || [])
+    .map((g) => (typeof g === "string" ? { name: g } : g))
+    .filter((g) => g && g.name);
+
+  const workflowByName = workflowGlobals.reduce((acc, g) => {
+    acc[g.name] = g;
+    return acc;
+  }, {});
 
   // Defensive: dispose previously registered providers stored on monaco (survives HMR)
   try {
@@ -163,6 +174,171 @@ export function registerPythonProviders(monaco, tips) {
           })
           .trimEnd();
 
+
+        // Workflow table contextual completions
+        const makeRange = (prefix) => new monaco.Range(
+          position.lineNumber,
+          Math.max(1, position.column - (prefix ? prefix.length : 0)),
+          position.lineNumber,
+          position.column
+        );
+
+        const colMatch = textBeforeCursor.match(/([a-zA-Z_]\w*(?:InputsTable|OutputsTable))\[\s*(['"]?)([^'"]*)$/);
+        if (colMatch) {
+          const [, tableName, quote, prefix] = colMatch;
+          const meta = workflowByName[tableName];
+          const cols = (meta?.columns || []).map(String);
+          const p = (prefix || '').toLowerCase();
+          const suggestions = cols
+            .filter((c) => !p || c.toLowerCase().includes(p))
+            .slice(0, 50)
+            .map((c) => ({
+              label: c,
+              kind: monaco.languages.CompletionItemKind.Field,
+              documentation: `Column: ${c}`,
+              insertText: quote ? c.slice(prefix.length) : JSON.stringify(c),
+              range: makeRange(prefix),
+            }));
+          return { suggestions };
+        }
+
+        const tableMemberMatch = textBeforeCursor.match(/([a-zA-Z_]\w*(?:InputsTable|OutputsTable))\[[^\]]*\]\.([a-zA-Z_]\w*)?$/);
+        if (tableMemberMatch) {
+          const prefix = tableMemberMatch[2] || "";
+          const suggestions = ["Row"]
+            .filter((s) => s.startsWith(prefix))
+            .map((s) => ({
+              label: s,
+              kind: monaco.languages.CompletionItemKind.Property,
+              documentation: "Table member",
+              insertText: s.slice(prefix.length),
+              range: makeRange(prefix),
+            }));
+          return { suggestions };
+        }
+
+        const cfgMemberMatch = textBeforeCursor.match(/\b(inputs|outputs)\.([a-zA-Z_]\w*)?$/);
+        if (cfgMemberMatch) {
+          const prefix = cfgMemberMatch[2] || '';
+          const members = ['tabs', 'instances', 'properties', 'columns'];
+          const suggestions = members
+            .filter((m) => m.startsWith(prefix))
+            .map((m) => ({
+              label: m,
+              kind: monaco.languages.CompletionItemKind.Property,
+              documentation: 'Workflow config',
+              insertText: m.slice(prefix.length),
+              range: makeRange(prefix),
+            }));
+          return { suggestions };
+        }
+
+        const rowStartMatch = textBeforeCursor.match(/([a-zA-Z_]\w*(?:InputsTable|OutputsTable))\[[^\]]*\]\.Row\s*$/);
+        if (rowStartMatch) {
+          const [, tableName] = rowStartMatch;
+          const meta = workflowByName[tableName];
+          const rows = (meta?.rows || []).map(String);
+          const suggestions = [
+            {
+              label: '[',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              documentation: 'Start row selector',
+              insertText: '[',
+              range: makeRange(''),
+            },
+            ...rows.slice(0, 50).map((r) => ({
+              label: r,
+              kind: monaco.languages.CompletionItemKind.Value,
+              documentation: `Row/Instance: ${r}`,
+              insertText: `[${JSON.stringify(r)}]`,
+              range: makeRange(''),
+            })),
+          ];
+          return { suggestions };
+        }
+
+        const rowMatch = textBeforeCursor.match(/([a-zA-Z_]\w*(?:InputsTable|OutputsTable))\[[^\]]*\]\.Row\[\s*(['"]?)([^'"]*)$/);
+        if (rowMatch) {
+          const [, tableName, quote, prefix] = rowMatch;
+          const meta = workflowByName[tableName];
+          const rows = (meta?.rows || []).map(String);
+          const p = (prefix || '').toLowerCase();
+          const suggestions = rows
+            .filter((r) => !p || r.toLowerCase().includes(p))
+            .slice(0, 50)
+            .map((r) => ({
+              label: r,
+              kind: monaco.languages.CompletionItemKind.Value,
+              documentation: `Row/Instance: ${r}`,
+              insertText: quote ? r.slice(prefix.length) : JSON.stringify(r),
+              range: makeRange(prefix),
+            }));
+          return { suggestions };
+        }
+
+        const inputRowMember = textBeforeCursor.match(/([a-zA-Z_]\w*InputsTable)\[[^\]]*\]\.Row\[[^\]]*\]\.([a-zA-Z_]\w*)?$/);
+        if (inputRowMember) {
+          const prefix = inputRowMember[2] || '';
+          const suggestions = ['Sample']
+            .filter((s) => s.startsWith(prefix))
+            .map((s) => ({
+              label: s,
+              kind: monaco.languages.CompletionItemKind.Property,
+              documentation: 'Inputs row member',
+              insertText: s.slice(prefix.length),
+              range: makeRange(prefix),
+            }));
+          return { suggestions };
+        }
+
+        const outputRowMember = textBeforeCursor.match(/([a-zA-Z_]\w*OutputsTable)\[[^\]]*\]\.Row\[[^\]]*\]\.([a-zA-Z_]\w*)?$/);
+        if (outputRowMember) {
+          const prefix = outputRowMember[2] || '';
+          const members = ['Value', 'Save', 'Sample'];
+          const suggestions = members
+            .filter((s) => s.startsWith(prefix))
+            .map((s) => ({
+              label: s,
+              kind: monaco.languages.CompletionItemKind.Property,
+              documentation: 'Outputs row member',
+              insertText: s.slice(prefix.length),
+              range: makeRange(prefix),
+            }));
+          return { suggestions };
+        }
+
+        const sampleIndexMatch = textBeforeCursor.match(/\.Sample\[\s*([^\]]*)$/);
+        if (sampleIndexMatch) {
+          const prefix = (sampleIndexMatch[1] || '').trim();
+          const options = ['0', 'index', 'i', '-1'];
+          const pfx = prefix.toLowerCase();
+          const suggestions = options
+            .filter((s) => !pfx || s.toLowerCase().startsWith(pfx))
+            .map((s) => ({
+              label: s,
+              kind: monaco.languages.CompletionItemKind.Variable,
+              documentation: 'Sample index',
+              insertText: s.slice(prefix.length),
+              range: makeRange(prefix),
+            }));
+          return { suggestions };
+        }
+
+        const sampleMember = textBeforeCursor.match(/\.Sample\[[^\]]*\]\.([a-zA-Z_]\w*)?$/);
+        if (sampleMember) {
+          const prefix = sampleMember[1] || '';
+          const members = ['Value', 'TimeOfSample'];
+          const suggestions = members
+            .filter((s) => s.startsWith(prefix))
+            .map((s) => ({
+              label: s,
+              kind: monaco.languages.CompletionItemKind.Property,
+              documentation: 'Sample member',
+              insertText: s.slice(prefix.length),
+              range: makeRange(prefix),
+            }));
+          return { suggestions };
+        }
         // Try to detect dotted access contexts like: module., module.na, module.Class., module.Class.me
         const classCtx = textBeforeCursor.match(/([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)?$/);
         const moduleCtx = textBeforeCursor.match(/([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)?$/);
@@ -211,13 +387,22 @@ export function registerPythonProviders(monaco, tips) {
           }
         }
 
-        // If inside parentheses and not in a dotted context, suppress global suggestions
-        if (inParens) {
-          return { suggestions: [] };
-        }
+        // Note: keep suggestions available inside parentheses too
 
         // Fallback: global suggestions (modules, variables, user-defined functions)
+
+        const extraGlobalSuggestions = (workflowGlobals || []).map((g) => ({
+          label: g.name,
+          kind: monaco.languages.CompletionItemKind.Variable,
+          documentation: g.variant === 'outputs'
+            ? `Workflow outputs table: ${g.name}`
+            : `Workflow inputs table: ${g.name}` ,
+          insertText: g.name,
+          filterText: String(g.name).toLowerCase(),
+        }));
+
         const baseSuggestions = [
+          ...extraGlobalSuggestions,
           ...Object.keys(tips)
             .filter((mod) => mod !== "__variables__" && mod !== "__functions__")
             .map((mod) => ({

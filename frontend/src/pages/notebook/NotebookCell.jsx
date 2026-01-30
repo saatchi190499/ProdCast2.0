@@ -31,7 +31,12 @@ export default function NotebookCell({ cell, onChange, output, onFocus }) {
       updateSize();
       try {
         const inserted = (e.changes || []).map((c) => c.text).join("");
-        if (inserted && (inserted.includes(".") || inserted.includes(","))) {
+        if (inserted && (
+          inserted.includes(".") ||
+          inserted.includes(",") ||
+          inserted.includes("[") ||
+          (/^[A-Za-z_]$/.test(inserted))
+        )) {
           editor.trigger("keyboard", "editor.action.triggerSuggest", {});
         }
       } catch {}
@@ -63,6 +68,8 @@ export default function NotebookCell({ cell, onChange, output, onFocus }) {
           scrollBeyondLastLine: false,
           scrollbar: { vertical: "hidden" },
           fixedOverflowWidgets: true,
+          suggestOnTriggerCharacters: true,
+          quickSuggestions: { other: true, comments: false, strings: false },
         }}
         theme={mode === "dark" ? "vs-dark" : "light"}
       />
